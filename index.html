@@ -45,6 +45,13 @@
             font-size: 2.5rem;
         }
         
+        h2.tamil-title {
+            margin: 5px 0 0 0;
+            font-size: 1.5rem;
+            font-weight: normal;
+            font-family: 'Arial Unicode MS', 'Tahoma', sans-serif;
+        }
+        
         .auth-section {
             display: flex;
             justify-content: center;
@@ -195,6 +202,7 @@
             flex-wrap: wrap;
             gap: 5px;
             margin-bottom: 20px;
+            justify-content: center;
         }
         
         .alphabet-letter {
@@ -202,6 +210,9 @@
             background-color: var(--light-color);
             border-radius: 3px;
             cursor: pointer;
+            font-size: 1.2rem;
+            min-width: 30px;
+            text-align: center;
         }
         
         .alphabet-letter.active {
@@ -217,6 +228,8 @@
         .song-index-item {
             margin-bottom: 8px;
             break-inside: avoid;
+            font-family: 'Arial Unicode MS', 'Tahoma', sans-serif;
+            font-size: 1.1rem;
         }
         
         .song-index-item a {
@@ -275,6 +288,7 @@
     <header>
         <div class="container">
             <h1>NJC Song Book</h1>
+            <h2 class="tamil-title">பாடல் புத்தகம்</h2>
             <div id="user-info" class="user-info hidden">
                 <span id="user-email"></span>
                 <button id="logout-btn">Sign Out</button>
@@ -309,40 +323,40 @@
                     <div class="lyric-form">
                         <h2>Add New Tamil Lyric</h2>
                         <div class="form-group">
-                            <label for="song-title">Song Title</label>
-                            <input type="text" id="song-title" placeholder="Enter song title">
+                            <label for="song-title">Song Title (தமிழ்)</label>
+                            <input type="text" id="song-title" placeholder="Enter song title in Tamil">
                         </div>
                         <div class="form-group">
-                            <label for="movie-name">Movie Name</label>
+                            <label for="movie-name">Movie Name (திரைப்படம்)</label>
                             <input type="text" id="movie-name" placeholder="Enter movie name (if applicable)">
                         </div>
                         <div class="form-group">
-                            <label for="music-director">Music Director</label>
+                            <label for="music-director">Music Director (இசையமைப்பாளர்)</label>
                             <input type="text" id="music-director" placeholder="Enter music director">
                         </div>
                         <div class="form-group">
-                            <label for="lyricist">Lyricist</label>
+                            <label for="lyricist">Lyricist (பாடலாசிரியர்)</label>
                             <input type="text" id="lyricist" placeholder="Enter lyricist">
                         </div>
                         <div class="form-group">
-                            <label for="singer">Singer</label>
+                            <label for="singer">Singer (பாடகர்)</label>
                             <input type="text" id="singer" placeholder="Enter singer">
                         </div>
                         <div class="form-group">
-                            <label for="language">Language</label>
+                            <label for="language">Language (மொழி)</label>
                             <select id="language">
-                                <option value="Tamil">Tamil</option>
-                                <option value="Telugu">Telugu</option>
-                                <option value="Malayalam">Malayalam</option>
-                                <option value="Kannada">Kannada</option>
-                                <option value="Hindi">Hindi</option>
+                                <option value="Tamil">Tamil (தமிழ்)</option>
+                                <option value="Telugu">Telugu (தெலுங்கு)</option>
+                                <option value="Malayalam">Malayalam (மலையாளம்)</option>
+                                <option value="Kannada">Kannada (கன்னடம்)</option>
+                                <option value="Hindi">Hindi (இந்தி)</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="lyrics-text">Lyrics</label>
+                            <label for="lyrics-text">Lyrics (பாடல் வரிகள்)</label>
                             <textarea id="lyrics-text" placeholder="Enter lyrics here..."></textarea>
                         </div>
-                        <button id="save-lyric" class="accent">Save Lyric</button>
+                        <button id="save-lyric" class="accent">Save Lyric (சேமிக்கவும்)</button>
                     </div>
                 </div>
             </div>
@@ -365,14 +379,14 @@
     <script>
         // Firebase configuration - replace with your actual config
         const firebaseConfig = {
-  apiKey: "AIzaSyBw_fYOgz0WTrCNMdi8el0DPi3JfAxTr3E",
-  authDomain: "songbook-add54.firebaseapp.com",
-  projectId: "songbook-add54",
-  storageBucket: "songbook-add54.firebasestorage.app",
-  messagingSenderId: "633087058549",
-  appId: "1:633087058549:web:a9a9a28836b059b6008e3c",
-  measurementId: "G-EKMD30J3GS"
-};
+            apiKey: "AIzaSyBw_fYOgz0WTrCNMdi8el0DPi3JfAxTr3E",
+            authDomain: "songbook-add54.firebaseapp.com",
+            projectId: "songbook-add54",
+            storageBucket: "songbook-add54.appspot.com",
+            messagingSenderId: "633087058549",
+            appId: "1:633087058549:web:a9a9a28836b059b6008e3c",
+            measurementId: "G-EKMD30J3GS"
+        };
         
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
@@ -396,15 +410,19 @@
         const userEmail = document.getElementById('user-email');
         const authSection = document.getElementById('auth-section');
         
-        // Alphabet letters for index
-        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        // Tamil alphabet for indexing (vowels and consonants)
+        const tamilAlphabet = [
+            'அ', 'ஆ', 'இ', 'ஈ', 'உ', 'ஊ', 'எ', 'ஏ', 'ஐ', 'ஒ', 'ஓ', 'ஔ',
+            'க', 'ங', 'ச', 'ஞ', 'ட', 'ண', 'த', 'ந', 'ப', 'ம', 'ய', 'ர',
+            'ல', 'வ', 'ழ', 'ள', 'ற', 'ன', 'ஷ', 'ஸ', 'ஜ', 'ஹ', 'க்ஷ'
+        ];
         
         // Current state
         let currentUser = null;
         let songs = [];
         let currentLetter = '';
         
-        // Initialize alphabet index
+        // Initialize Tamil alphabet index
         function initAlphabetIndex(containerId) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
@@ -412,7 +430,7 @@
             // Add All option
             const allLetter = document.createElement('div');
             allLetter.className = 'alphabet-letter' + (currentLetter === '' ? ' active' : '');
-            allLetter.textContent = 'ALL';
+            allLetter.textContent = 'அனைத்தும்';
             allLetter.addEventListener('click', () => {
                 currentLetter = '';
                 renderSongIndex(containerId === 'alphabet-index' ? 'song-index-list' : 'viewer-song-index');
@@ -421,8 +439,8 @@
             });
             container.appendChild(allLetter);
             
-            // Add letters A-Z
-            alphabet.forEach(letter => {
+            // Add Tamil letters
+            tamilAlphabet.forEach(letter => {
                 const letterEl = document.createElement('div');
                 letterEl.className = 'alphabet-letter' + (currentLetter === letter ? ' active' : '');
                 letterEl.textContent = letter;
@@ -445,16 +463,18 @@
             
             // Filter by selected letter
             if (currentLetter) {
-                filteredSongs = filteredSongs.filter(song => 
-                    song.songTitle.charAt(0).toUpperCase() === currentLetter
-                );
+                filteredSongs = filteredSongs.filter(song => {
+                    const firstChar = song.songTitle.charAt(0);
+                    // Check for Tamil characters or their Unicode equivalents
+                    return firstChar === currentLetter;
+                });
             }
             
-            // Sort alphabetically
-            filteredSongs.sort((a, b) => a.songTitle.localeCompare(b.songTitle));
+            // Sort alphabetically based on Tamil order
+            filteredSongs.sort((a, b) => a.songTitle.localeCompare(b.songTitle, 'ta'));
             
             if (filteredSongs.length === 0) {
-                container.innerHTML = '<p>No songs found</p>';
+                container.innerHTML = '<p>பாடல்கள் எதுவும் கிடைக்கவில்லை</p>';
                 return;
             }
             
@@ -491,7 +511,7 @@
                             ${lyric.musicDirector ? `<p><strong>Music:</strong> ${lyric.musicDirector}</p>` : ''}
                             ${lyric.lyricist ? `<p><strong>Lyrics:</strong> ${lyric.lyricist}</p>` : ''}
                             ${lyric.singer ? `<p><strong>Singer:</strong> ${lyric.singer}</p>` : ''}
-                            <div style="white-space: pre-line; margin-top: 20px; font-size: 1.1rem; line-height: 1.6;">${lyric.lyricsText}</div>
+                            <div style="white-space: pre-line; margin-top: 20px; font-size: 1.1rem; line-height: 1.6; font-family: 'Arial Unicode MS', 'Tahoma', sans-serif;">${lyric.lyricsText}</div>
                         `;
                         
                         if (currentUser && currentUser.email === 'simsonpeter@gmail.com') {
@@ -515,7 +535,7 @@
         }
         
         // Delete lyric
-        function deleteLyric(lyricId) {
+        window.deleteLyric = function(lyricId) {
             if (confirm('Are you sure you want to delete this lyric?')) {
                 db.collection('lyrics').doc(lyricId).delete()
                     .then(() => {
@@ -728,7 +748,7 @@
             container.innerHTML = '';
             
             if (filteredSongs.length === 0) {
-                container.innerHTML = '<p>No songs found</p>';
+                container.innerHTML = '<p>பாடல்கள் எதுவும் கிடைக்கவில்லை</p>';
                 return;
             }
             
