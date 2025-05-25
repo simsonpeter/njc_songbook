@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NJC Tamil Lyric Book</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <style>
+        :root {
+            --primary-color: #4a148c;
+            --secondary-color: #7b1fa2;
+            --accent-color: #e91e63;
+            --light-color: #f3e5f5;
+            --dark-color: #12005e;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+        
+        .auth-section {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            gap: 10px;
+        }
+        
+        button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: var(--primary-color);
+        }
+        
+        button.accent {
+            background-color: var(--accent-color);
+        }
+        
+        button.accent:hover {
+            background-color: #c2185b;
+        }
+        
+        .lyric-form {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+        
+        .lyrics-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .lyric-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            transition: transform 0.3s;
+        }
+        
+        .lyric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .lyric-card h3 {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+        
+        .lyric-card p {
+            white-space: pre-line;
+        }
+        
+        .lyric-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .lyric-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .search-bar {
+            margin: 20px 0;
+        }
+        
+        .search-bar input {
+            padding: 10px 15px;
+            font-size: 1rem;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+        
+        .tab.active {
+            background-color: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .alphabet-index {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .alphabet-letter {
+            padding: 5px 10px;
+            background-color: var(--light-color);
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .alphabet-letter.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .song-index {
+            column-count: 3;
+            column-gap: 20px;
+        }
+        
+        .song-index-item {
+            margin-bottom: 8px;
+            break-inside: avoid;
+        }
+        
+        .song-index-item a {
+            color: var(--secondary-color);
+            text-decoration: none;
+        }
+        
+        .song-index-item a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 768px) {
+            .lyrics-list {
+                grid-template-columns: 1fr;
+            }
+            
+            .auth-section {
+                flex-direction: column;
+            }
+            
+            .song-index {
+                column-count: 2;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .song-index {
+                column-count: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>NJC Tamil Lyric Book</h1>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div id="auth-section" class="auth-section">
+            <input type="email" id="email" placeholder="Email">
+            <input type="password" id="password" placeholder="Password">
+            <button id="login-btn">Login</button>
+            <button id="signup-btn">Sign Up</button>
+            <button id="logout-btn" class="hidden">Logout</button>
+        </div>
+        
+        <div id="app-content" class="hidden">
+            <div id="admin-controls" class="hidden">
+                <div class="tabs">
+                    <div class="tab active" data-tab="song-index">Song Index</div>
+                    <div class="tab" data-tab="add-lyric">Add Lyric</div>
+                </div>
+                
+                <div class="tab-content active" id="song-index">
+                    <div class="search-bar">
+                        <input type="text" id="search-input" placeholder="Search songs...">
+                    </div>
+                    <div class="alphabet-index" id="alphabet-index"></div>
+                    <div class="song-index" id="song-index-list"></div>
+                </div>
+                
+                <div class="tab-content" id="add-lyric">
+                    <div class="lyric-form">
+                        <h2>Add New Tamil Lyric</h2>
+                        <div class="form-group">
+                            <label for="song-title">Song Title</label>
+                            <input type="text" id="song-title" placeholder="Enter song title">
+                        </div>
+                        <div class="form-group">
+                            <label for="movie-name">Movie Name</label>
+                            <input type="text" id="movie-name" placeholder="Enter movie name (if applicable)">
+                        </div>
+                        <div class="form-group">
+                            <label for="music-director">Music Director</label>
+                            <input type="text" id="music-director" placeholder="Enter music director">
+                        </div>
+                        <div class="form-group">
+                            <label for="lyricist">Lyricist</label>
+                            <input type="text" id="lyricist" placeholder="Enter lyricist">
+                        </div>
+                        <div class="form-group">
+                            <label for="singer">Singer</label>
+                            <input type="text" id="singer" placeholder="Enter singer">
+                        </div>
+                        <div class="form-group">
+                            <label for="language">Language</label>
+                            <select id="language">
+                                <option value="Tamil">Tamil</option>
+                                <option value="Telugu">Telugu</option>
+                                <option value="Malayalam">Malayalam</option>
+                                <option value="Kannada">Kannada</option>
+                                <option value="Hindi">Hindi</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="lyrics-text">Lyrics</label>
+                            <textarea id="lyrics-text" placeholder="Enter lyrics here..."></textarea>
+                        </div>
+                        <button id="save-lyric" class="accent">Save Lyric</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="viewer-content">
+                <div class="search-bar">
+                    <input type="text" id="viewer-search-input" placeholder="Search songs...">
+                </div>
+                <div class="alphabet-index" id="viewer-alphabet-index"></div>
+                <div class="song-index" id="viewer-song-index"></div>
+            </div>
+            
+            <div id="lyric-detail-view" class="hidden">
+                <button id="back-to-index">← Back to Index</button>
+                <div id="lyric-detail-content" style="background-color: white; padding: 20px; border-radius: 8px; margin-top: 20px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration - replace with your actual config
+        const firebaseConfig = {
+  apiKey: "AIzaSyBw_fYOgz0WTrCNMdi8el0DPi3JfAxTr3E",
+  authDomain: "songbook-add54.firebaseapp.com",
+  projectId: "songbook-add54",
+  storageBucket: "songbook-add54.firebasestorage.app",
+  messagingSenderId: "633087058549",
+  appId: "1:633087058549:web:a9a9a28836b059b6008e3c",
+  measurementId: "G-EKMD30J3GS"
+};
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        // DOM elements
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('login-btn');
+        const signupBtn = document.getElementById('signup-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const appContent = document.getElementById('app-content');
+        const adminControls = document.getElementById('admin-controls');
+        const viewerContent = document.getElementById('viewer-content');
+        const saveLyricBtn = document.getElementById('save-lyric');
+        const backToIndexBtn = document.getElementById('back-to-index');
+        const lyricDetailView = document.getElementById('lyric-detail-view');
+        const lyricDetailContent = document.getElementById('lyric-detail-content');
+        
+        // Alphabet letters for index
+        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        
+        // Current state
+        let currentUser = null;
+        let songs = [];
+        let currentLetter = '';
+        
+        // Initialize alphabet index
+        function initAlphabetIndex(containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            // Add All option
+            const allLetter = document.createElement('div');
+            allLetter.className = 'alphabet-letter' + (currentLetter === '' ? ' active' : '');
+            allLetter.textContent = 'ALL';
+            allLetter.addEventListener('click', () => {
+                currentLetter = '';
+                renderSongIndex(containerId === 'alphabet-index' ? 'song-index-list' : 'viewer-song-index');
+                document.querySelectorAll(`#${containerId} .alphabet-letter`).forEach(el => el.classList.remove('active'));
+                allLetter.classList.add('active');
+            });
+            container.appendChild(allLetter);
+            
+            // Add letters A-Z
+            alphabet.forEach(letter => {
+                const letterEl = document.createElement('div');
+                letterEl.className = 'alphabet-letter' + (currentLetter === letter ? ' active' : '');
+                letterEl.textContent = letter;
+                letterEl.addEventListener('click', () => {
+                    currentLetter = letter;
+                    renderSongIndex(containerId === 'alphabet-index' ? 'song-index-list' : 'viewer-song-index');
+                    document.querySelectorAll(`#${containerId} .alphabet-letter`).forEach(el => el.classList.remove('active'));
+                    letterEl.classList.add('active');
+                });
+                container.appendChild(letterEl);
+            });
+        }
+        
+        // Render song index
+        function renderSongIndex(containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            let filteredSongs = [...songs];
+            
+            // Filter by selected letter
+            if (currentLetter) {
+                filteredSongs = filteredSongs.filter(song => 
+                    song.songTitle.charAt(0).toUpperCase() === currentLetter
+                );
+            }
+            
+            // Sort alphabetically
+            filteredSongs.sort((a, b) => a.songTitle.localeCompare(b.songTitle));
+            
+            if (filteredSongs.length === 0) {
+                container.innerHTML = '<p>No songs found</p>';
+                return;
+            }
+            
+            filteredSongs.forEach(song => {
+                const songEl = document.createElement('div');
+                songEl.className = 'song-index-item';
+                
+                const songLink = document.createElement('a');
+                songLink.href = '#';
+                songLink.textContent = song.songTitle;
+                songLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    viewLyric(song.id);
+                });
+                
+                songEl.appendChild(songLink);
+                container.appendChild(songEl);
+            });
+        }
+        
+        // View lyric detail
+        function viewLyric(lyricId) {
+            db.collection('lyrics').doc(lyricId).get()
+                .then(doc => {
+                    if (doc.exists) {
+                        const lyric = doc.data();
+                        lyricDetailContent.innerHTML = `
+                            <div class="lyric-meta">
+                                <span>${lyric.language}</span>
+                                <span>${new Date(lyric.createdAt?.toDate()).toLocaleDateString()}</span>
+                            </div>
+                            <h2>${lyric.songTitle}</h2>
+                            ${lyric.movieName ? `<p><strong>Movie:</strong> ${lyric.movieName}</p>` : ''}
+                            ${lyric.musicDirector ? `<p><strong>Music:</strong> ${lyric.musicDirector}</p>` : ''}
+                            ${lyric.lyricist ? `<p><strong>Lyrics:</strong> ${lyric.lyricist}</p>` : ''}
+                            ${lyric.singer ? `<p><strong>Singer:</strong> ${lyric.singer}</p>` : ''}
+                            <div style="white-space: pre-line; margin-top: 20px; font-size: 1.1rem; line-height: 1.6;">${lyric.lyricsText}</div>
+                        `;
+                        
+                        if (currentUser && currentUser.email === 'simsonpeter@gmail.com') {
+                            lyricDetailContent.innerHTML += `
+                                <div style="margin-top: 20px;">
+                                    <button class="accent" onclick="deleteLyric('${lyricId}')">Delete Lyric</button>
+                                </div>
+                            `;
+                        }
+                        
+                        viewerContent.classList.add('hidden');
+                        adminControls.classList.add('hidden');
+                        lyricDetailView.classList.remove('hidden');
+                    } else {
+                        alert('Lyric not found!');
+                    }
+                })
+                .catch(error => {
+                    alert('Error loading lyric: ' + error.message);
+                });
+        }
+        
+        // Delete lyric
+        function deleteLyric(lyricId) {
+            if (confirm('Are you sure you want to delete this lyric?')) {
+                db.collection('lyrics').doc(lyricId).delete()
+                    .then(() => {
+                        alert('Lyric deleted successfully!');
+                        loadSongs();
+                        backToIndex();
+                    })
+                    .catch(error => {
+                        alert('Error deleting lyric: ' + error.message);
+                    });
+            }
+        }
+        
+        // Back to index view
+        function backToIndex() {
+            lyricDetailView.classList.add('hidden');
+            if (currentUser && currentUser.email === 'simsonpeter@gmail.com') {
+                adminControls.classList.remove('hidden');
+                document.querySelector('.tab[data-tab="song-index"]').click();
+            } else {
+                viewerContent.classList.remove('hidden');
+            }
+        }
+        
+        // Load all songs
+        function loadSongs() {
+            db.collection('lyrics').orderBy('songTitle').get()
+                .then(querySnapshot => {
+                    songs = [];
+                    querySnapshot.forEach(doc => {
+                        songs.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+                    
+                    renderSongIndex('song-index-list');
+                    renderSongIndex('viewer-song-index');
+                })
+                .catch(error => {
+                    console.error('Error loading songs: ', error);
+                });
+        }
+        
+        // Tab switching
+        function setupTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    
+                    tab.classList.add('active');
+                    const tabId = tab.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                    
+                    if (tabId === 'song-index') {
+                        loadSongs();
+                    }
+                });
+            });
+        }
+        
+        // Authentication state observer
+        auth.onAuthStateChanged(user => {
+            currentUser = user;
+            if (user) {
+                // User is signed in
+                document.getElementById('auth-section').classList.add('hidden');
+                logoutBtn.classList.remove('hidden');
+                appContent.classList.remove('hidden');
+                
+                // Check if this is the admin account
+                if (user.email === 'simsonpeter@gmail.com') {
+                    adminControls.classList.remove('hidden');
+                    viewerContent.classList.add('hidden');
+                    setupTabs();
+                    loadSongs();
+                } else {
+                    adminControls.classList.add('hidden');
+                    viewerContent.classList.remove('hidden');
+                    loadSongs();
+                }
+                
+                initAlphabetIndex('alphabet-index');
+                initAlphabetIndex('viewer-alphabet-index');
+            } else {
+                // User is signed out
+                document.getElementById('auth-section').classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
+                appContent.classList.add('hidden');
+            }
+        });
+        
+        // Login function
+        loginBtn.addEventListener('click', () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    alert('Logged in successfully!');
+                })
+                .catch(error => {
+                    alert('Login error: ' + error.message);
+                });
+        });
+        
+        // Signup function
+        signupBtn.addEventListener('click', () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            
+            auth.createUserWithEmailAndPassword(email, password)
+                .then(() => {
+                    alert('Account created successfully!');
+                })
+                .catch(error => {
+                    alert('Signup error: ' + error.message);
+                });
+        });
+        
+        // Logout function
+        logoutBtn.addEventListener('click', () => {
+            auth.signOut()
+                .then(() => {
+                    alert('Logged out successfully!');
+                })
+                .catch(error => {
+                    alert('Logout error: ' + error.message);
+                });
+        });
+        
+        // Save lyric function
+        saveLyricBtn.addEventListener('click', () => {
+            const songTitle = document.getElementById('song-title').value;
+            const movieName = document.getElementById('movie-name').value;
+            const musicDirector = document.getElementById('music-director').value;
+            const lyricist = document.getElementById('lyricist').value;
+            const singer = document.getElementById('singer').value;
+            const language = document.getElementById('language').value;
+            const lyricsText = document.getElementById('lyrics-text').value;
+            
+            if (!songTitle || !lyricsText) {
+                alert('Song title and lyrics are required!');
+                return;
+            }
+            
+            if (!currentUser || currentUser.email !== 'simsonpeter@gmail.com') {
+                alert('Only admin can add lyrics!');
+                return;
+            }
+            
+            db.collection('lyrics').add({
+                songTitle,
+                movieName,
+                musicDirector,
+                lyricist,
+                singer,
+                language,
+                lyricsText,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdBy: currentUser.uid,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(() => {
+                alert('Lyric saved successfully!');
+                document.getElementById('song-title').value = '';
+                document.getElementById('movie-name').value = '';
+                document.getElementById('music-director').value = '';
+                document.getElementById('lyricist').value = '';
+                document.getElementById('singer').value = '';
+                document.getElementById('lyrics-text').value = '';
+                loadSongs();
+            })
+            .catch(error => {
+                alert('Error saving lyric: ' + error.message);
+            });
+        });
+        
+        // Back to index button
+        backToIndexBtn.addEventListener('click', backToIndex);
+        
+        // Search functionality
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredSongs = songs.filter(song => 
+                song.songTitle.toLowerCase().includes(searchTerm)
+            );
+            renderFilteredSongs(filteredSongs, 'song-index-list');
+        });
+        
+        document.getElementById('viewer-search-input').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredSongs = songs.filter(song => 
+                song.songTitle.toLowerCase().includes(searchTerm)
+            );
+            renderFilteredSongs(filteredSongs, 'viewer-song-index');
+        });
+        
+        function renderFilteredSongs(filteredSongs, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            if (filteredSongs.length === 0) {
+                container.innerHTML = '<p>No songs found</p>';
+                return;
+            }
+            
+            filteredSongs.forEach(song => {
+                const songEl = document.createElement('div');
+                songEl.className = 'song-index-item';
+                
+                const songLink = document.createElement('a');
+                songLink.href = '#';
+                songLink.textContent = song.songTitle;
+                songLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    viewLyric(song.id);
+                });
+                
+                songEl.appendChild(songLink);
+                container.appendChild(songEl);
+            });
+        }
+        
+        // Initialize
+        window.onload = () => {
+            // Check if user is logged in
+            if (auth.currentUser) {
+                document.getElementById('auth-section').classList.add('hidden');
+                logoutBtn.classList.remove('hidden');
+                appContent.classList.remove('hidden');
+            }
+        };
+    </script>
+</body>
+</html>
