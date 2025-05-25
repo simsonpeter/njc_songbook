@@ -37,6 +37,7 @@
             text-align: center;
             border-radius: 0 0 10px 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
         }
         
         h1 {
@@ -227,6 +228,22 @@
             text-decoration: underline;
         }
         
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .user-info button {
+            background-color: var(--accent-color);
+            padding: 5px 10px;
+            font-size: 0.9rem;
+        }
+        
         @media (max-width: 768px) {
             .lyrics-list {
                 grid-template-columns: 1fr;
@@ -238,6 +255,12 @@
             
             .song-index {
                 column-count: 2;
+            }
+            
+            .user-info {
+                position: static;
+                justify-content: center;
+                margin-top: 10px;
             }
         }
         
@@ -252,6 +275,10 @@
     <header>
         <div class="container">
             <h1>NJC Tamil Lyric Book</h1>
+            <div id="user-info" class="user-info hidden">
+                <span id="user-email"></span>
+                <button id="logout-btn">Sign Out</button>
+            </div>
         </div>
     </header>
     
@@ -261,7 +288,6 @@
             <input type="password" id="password" placeholder="Password">
             <button id="login-btn">Login</button>
             <button id="signup-btn">Sign Up</button>
-            <button id="logout-btn" class="hidden">Logout</button>
         </div>
         
         <div id="app-content" class="hidden">
@@ -330,7 +356,7 @@
             </div>
             
             <div id="lyric-detail-view" class="hidden">
-                <button id="back-to-index">← Back to Index</button>
+                <button id="back-to-index" class="accent">← Back to Index</button>
                 <div id="lyric-detail-content" style="background-color: white; padding: 20px; border-radius: 8px; margin-top: 20px;"></div>
             </div>
         </div>
@@ -366,6 +392,9 @@
         const backToIndexBtn = document.getElementById('back-to-index');
         const lyricDetailView = document.getElementById('lyric-detail-view');
         const lyricDetailContent = document.getElementById('lyric-detail-content');
+        const userInfo = document.getElementById('user-info');
+        const userEmail = document.getElementById('user-email');
+        const authSection = document.getElementById('auth-section');
         
         // Alphabet letters for index
         const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -557,8 +586,9 @@
             currentUser = user;
             if (user) {
                 // User is signed in
-                document.getElementById('auth-section').classList.add('hidden');
-                logoutBtn.classList.remove('hidden');
+                authSection.classList.add('hidden');
+                userInfo.classList.remove('hidden');
+                userEmail.textContent = user.email;
                 appContent.classList.remove('hidden');
                 
                 // Check if this is the admin account
@@ -577,8 +607,8 @@
                 initAlphabetIndex('viewer-alphabet-index');
             } else {
                 // User is signed out
-                document.getElementById('auth-section').classList.remove('hidden');
-                logoutBtn.classList.add('hidden');
+                authSection.classList.remove('hidden');
+                userInfo.classList.add('hidden');
                 appContent.classList.add('hidden');
             }
         });
@@ -591,6 +621,8 @@
             auth.signInWithEmailAndPassword(email, password)
                 .then(() => {
                     alert('Logged in successfully!');
+                    emailInput.value = '';
+                    passwordInput.value = '';
                 })
                 .catch(error => {
                     alert('Login error: ' + error.message);
@@ -605,6 +637,8 @@
             auth.createUserWithEmailAndPassword(email, password)
                 .then(() => {
                     alert('Account created successfully!');
+                    emailInput.value = '';
+                    passwordInput.value = '';
                 })
                 .catch(error => {
                     alert('Signup error: ' + error.message);
@@ -719,8 +753,9 @@
         window.onload = () => {
             // Check if user is logged in
             if (auth.currentUser) {
-                document.getElementById('auth-section').classList.add('hidden');
-                logoutBtn.classList.remove('hidden');
+                authSection.classList.add('hidden');
+                userInfo.classList.remove('hidden');
+                userEmail.textContent = auth.currentUser.email;
                 appContent.classList.remove('hidden');
             }
         };
