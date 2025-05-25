@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NJC Tamil Lyric Book</title>
+    <title>NJC Song Book</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
@@ -408,6 +408,42 @@
             font-size: 1.1rem;
         }
         
+        .reset-password-link {
+            color: var(--accent-color);
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            display: block;
+            text-align: center;
+        }
+        
+        .reset-password-link:hover {
+            color: #c2185b;
+        }
+        
+        .reset-password-form {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            margin: 20px auto;
+            max-width: 500px;
+        }
+        
+        .reset-password-form h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+            text-align: center;
+        }
+        
+        .reset-message {
+            text-align: center;
+            margin: 20px 0;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        
         @media (max-width: 900px) {
             body {
                 padding-top: 200px;
@@ -484,8 +520,8 @@
 <body>
     <header>
         <div class="header-content">
-            <h1>NJC Tamil Lyric Book</h1>
-            <h2 class="tamil-title">தமிழ் பாடல் புத்தகம்</h2>
+            <h1>NJC Song Book</h1>
+            <h2 class="tamil-title">பாடல் புத்தகம்</h2>
             <div id="user-info" class="user-info hidden">
                 <span id="user-email"></span>
                 <button id="logout-btn">Sign Out</button>
@@ -499,6 +535,20 @@
             <input type="password" id="password" placeholder="Password">
             <button id="login-btn">Login</button>
             <button id="signup-btn">Sign Up</button>
+            <span id="reset-password-link" class="reset-password-link">Forgot Password?</span>
+        </div>
+        
+        <div id="reset-password-section" class="hidden">
+            <div class="reset-password-form">
+                <h2>Reset Password</h2>
+                <div class="form-group">
+                    <label for="reset-email">Email Address</label>
+                    <input type="email" id="reset-email" placeholder="Enter your email">
+                </div>
+                <button id="send-reset-btn" class="accent">Send Reset Link</button>
+                <button id="cancel-reset-btn">Cancel</button>
+                <div id="reset-message" class="reset-message hidden"></div>
+            </div>
         </div>
         
         <div id="app-content" class="hidden">
@@ -610,6 +660,12 @@
         const userInfo = document.getElementById('user-info');
         const userEmail = document.getElementById('user-email');
         const authSection = document.getElementById('auth-section');
+        const resetPasswordLink = document.getElementById('reset-password-link');
+        const resetPasswordSection = document.getElementById('reset-password-section');
+        const resetEmailInput = document.getElementById('reset-email');
+        const sendResetBtn = document.getElementById('send-reset-btn');
+        const cancelResetBtn = document.getElementById('cancel-reset-btn');
+        const resetMessage = document.getElementById('reset-message');
         
         // Tamil alphabet for indexing (vowels and consonants)
         const tamilAlphabet = [
@@ -849,12 +905,47 @@
             });
         }
         
+        // Password reset functions
+        function showResetPasswordForm() {
+            authSection.classList.add('hidden');
+            resetPasswordSection.classList.remove('hidden');
+            resetMessage.classList.add('hidden');
+            resetEmailInput.value = '';
+        }
+        
+        function hideResetPasswordForm() {
+            resetPasswordSection.classList.add('hidden');
+            authSection.classList.remove('hidden');
+        }
+        
+        function sendPasswordResetEmail() {
+            const email = resetEmailInput.value.trim();
+            
+            if (!email) {
+                resetMessage.textContent = 'Please enter your email address';
+                resetMessage.classList.remove('hidden');
+                return;
+            }
+            
+            auth.sendPasswordResetEmail(email)
+                .then(() => {
+                    resetMessage.textContent = 'Password reset email sent! Please check your inbox.';
+                    resetMessage.classList.remove('hidden');
+                    resetEmailInput.value = '';
+                })
+                .catch(error => {
+                    resetMessage.textContent = 'Error: ' + error.message;
+                    resetMessage.classList.remove('hidden');
+                });
+        }
+        
         // Authentication state observer
         auth.onAuthStateChanged(user => {
             currentUser = user;
             if (user) {
                 // User is signed in
                 authSection.classList.add('hidden');
+                resetPasswordSection.classList.add('hidden');
                 userInfo.classList.remove('hidden');
                 userEmail.textContent = user.email;
                 appContent.classList.remove('hidden');
@@ -873,6 +964,7 @@
             } else {
                 // User is signed out
                 authSection.classList.remove('hidden');
+                resetPasswordSection.classList.add('hidden');
                 userInfo.classList.add('hidden');
                 appContent.classList.add('hidden');
             }
@@ -1044,6 +1136,11 @@
                 targetContainer.appendChild(songEl);
             });
         }
+        
+        // Password reset event listeners
+        resetPasswordLink.addEventListener('click', showResetPasswordForm);
+        cancelResetBtn.addEventListener('click', hideResetPasswordForm);
+        sendResetBtn.addEventListener('click', sendPasswordResetEmail);
         
         // Initialize - LOADS SONGS IMMEDIATELY FOR LOGGED IN USERS
         window.onload = () => {
