@@ -679,6 +679,7 @@
         let songs = [];
         let currentLetter = '';
         let availableLetters = new Set();
+        let currentEditingLyricId = null;
         
         // Initialize Tamil alphabet index based on available songs
         function initAlphabetIndex(containerId) {
@@ -732,7 +733,7 @@
             });
         }
         
-        // Render song index - SHOWS ALL SONGS BY DEFAULT
+        // Render song index
         function renderSongIndex(containerId) {
             const container = document.getElementById(containerId);
             const parentContainer = document.getElementById(`${containerId}-container`);
@@ -742,7 +743,6 @@
             
             let filteredSongs = [...songs];
             
-            // Only filter if a specific letter is selected
             if (currentLetter && currentLetter !== '') {
                 filteredSongs = filteredSongs.filter(song => {
                     return song.songTitle && song.songTitle.charAt(0) === currentLetter;
@@ -787,6 +787,18 @@
                 .then(doc => {
                     if (doc.exists) {
                         const lyric = doc.data();
+                        currentEditingLyricId = lyricId;
+                        
+                        let adminControlsHTML = '';
+                        if (currentUser && currentUser.email === 'simsonpeter@gmail.com') {
+                            adminControlsHTML = `
+                                <div style="margin-top: 30px;">
+                                    <button class="accent" onclick="editLyric()">Edit Lyric</button>
+                                    <button class="accent" onclick="deleteLyric('${lyricId}')">Delete Lyric</button>
+                                </div>
+                            `;
+                        }
+                        
                         lyricDetailContent.innerHTML = `
                             <h2>${lyric.songTitle}</h2>
                             <div class="lyric-meta">
@@ -802,15 +814,8 @@
                             </div>
                             
                             <div class="lyric-text">${lyric.lyricsText}</div>
+                            ${adminControlsHTML}
                         `;
-                        
-                        if (currentUser && currentUser.email === 'simsonpeter@gmail.com') {
-                            lyricDetailContent.innerHTML += `
-                                <div style="margin-top: 30px;">
-                                    <button class="accent" onclick="deleteLyric('${lyricId}')">Delete Lyric</button>
-                                </div>
-                            `;
-                        }
                         
                         viewerContent.classList.add('hidden');
                         adminControls.classList.add('hidden');
@@ -821,6 +826,40 @@
                 })
                 .catch(error => {
                     alert('Error loading lyric: ' + error.message);
+                });
+        }
+        
+        // Edit lyric
+        window.editLyric = function() {
+            if (!currentEditingLyricId) return;
+            
+            db.collection('lyrics').doc(currentEditingLyricId).get()
+                .then(doc => {
+                    if (doc.exists) {
+                        const lyric = doc.data();
+                        
+                        // Fill the form with existing data
+                        document.getElementById('song-title').value = lyric.songTitle || '';
+                        document.getElementById('movie-name').value = lyric.movieName || '';
+                        document.getElementById('music-director').value = lyric.musicDirector || '';
+                        document.getElementById('lyricist').value = lyric.lyricist || '';
+                        document.getElementById('singer').value = lyric.singer || '';
+                        document.getElementById('language').value = lyric.language || 'Tamil';
+                        document.getElementById('lyrics-text').value = lyric.lyricsText || '';
+                        
+                        // Change the form title and button
+                        document.querySelector('#add-lyric h2').textContent = 'Edit Tamil Lyric';
+                        document.getElementById('save-lyric').textContent = 'Update Lyric (மேம்படுத்தவும்)';
+                        
+                        // Switch to the add-lyric tab
+                        document.querySelector('.tab[data-tab="add-lyric"]').click();
+                        
+                        // Scroll to the form
+                        document.querySelector('.lyric-form').scrollIntoView({ behavior: 'smooth' });
+                    }
+                })
+                .catch(error => {
+                    alert('Error loading lyric for editing: ' + error.message);
                 });
         }
         
@@ -850,7 +889,7 @@
             }
         }
         
-        // Load all songs - INITIALIZES WITH ALL SONGS VISIBLE
+        // Load all songs
         function loadSongs() {
             db.collection('lyrics').orderBy('songTitle').get()
                 .then(querySnapshot => {
@@ -863,7 +902,6 @@
                     });
                     
                     updateAvailableLetters();
-                    // Set to show all songs by default
                     currentLetter = '';
                     renderSongIndex('song-index-list');
                     renderSongIndex('viewer-song-index');
@@ -900,6 +938,19 @@
                     
                     if (tabId === 'song-index') {
                         loadSongs();
+                    } else if (tabId === 'add-lyric') {
+                        // Reset form when switching to add lyric tab
+                        if (!currentEditingLyricId) {
+                            document.querySelector('#add-lyric h2').textContent = 'Add New Tamil Lyric';
+                            document.getElementById('save-lyric').textContent = 'Save Lyric (சேமிக்கவும்)';
+                            document.getElementById('song-title').value = '';
+                            document.getElementById('movie-name').value = '';
+                            document.getElementById('music-director').value = '';
+                            document.getElementById('lyricist').value = '';
+                            document.getElementById('singer').value = '';
+                            document.getElementById('language').value = 'Tamil';
+                            document.getElementById('lyrics-text').value = '';
+                        }
                     }
                 });
             });
@@ -955,11 +1006,11 @@
                     adminControls.classList.remove('hidden');
                     viewerContent.classList.add('hidden');
                     setupTabs();
-                    loadSongs(); // Load songs immediately for admin
+                    loadSongs();
                 } else {
                     adminControls.classList.add('hidden');
                     viewerContent.classList.remove('hidden');
-                    loadSongs(); // Load songs immediately for regular users
+                    loadSongs();
                 }
             } else {
                 // User is signed out
@@ -1008,7 +1059,7 @@
                 });
         });
         
-        // Save lyric function
+        // Save/Update lyric function
         saveLyricBtn.addEventListener('click', () => {
             const songTitle = document.getElementById('song-title').value;
             const movieName = document.getElementById('movie-name').value;
@@ -1024,11 +1075,11 @@
             }
             
             if (!currentUser || currentUser.email !== 'simsonpeter@gmail.com') {
-                alert('Only admin can add lyrics!');
+                alert('Only admin can add/edit lyrics!');
                 return;
             }
             
-            db.collection('lyrics').add({
+            const lyricData = {
                 songTitle,
                 movieName,
                 musicDirector,
@@ -1036,24 +1087,42 @@
                 singer,
                 language,
                 lyricsText,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                createdBy: currentUser.uid,
                 lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-            })
-            .then(() => {
-                alert('Lyric saved successfully!');
-                document.getElementById('song-title').value = '';
-                document.getElementById('movie-name').value = '';
-                document.getElementById('music-director').value = '';
-                document.getElementById('lyricist').value = '';
-                document.getElementById('singer').value = '';
-                document.getElementById('lyrics-text').value = '';
-                loadSongs();
-                document.querySelector('.tab[data-tab="song-index"]').click();
-            })
-            .catch(error => {
-                alert('Error saving lyric: ' + error.message);
-            });
+            };
+            
+            if (currentEditingLyricId) {
+                // Update existing lyric
+                db.collection('lyrics').doc(currentEditingLyricId).update(lyricData)
+                .then(() => {
+                    alert('Lyric updated successfully!');
+                    currentEditingLyricId = null;
+                    document.querySelector('.tab[data-tab="song-index"]').click();
+                    loadSongs();
+                })
+                .catch(error => {
+                    alert('Error updating lyric: ' + error.message);
+                });
+            } else {
+                // Add new lyric
+                lyricData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                lyricData.createdBy = currentUser.uid;
+                
+                db.collection('lyrics').add(lyricData)
+                .then(() => {
+                    alert('Lyric saved successfully!');
+                    document.getElementById('song-title').value = '';
+                    document.getElementById('movie-name').value = '';
+                    document.getElementById('music-director').value = '';
+                    document.getElementById('lyricist').value = '';
+                    document.getElementById('singer').value = '';
+                    document.getElementById('lyrics-text').value = '';
+                    loadSongs();
+                    document.querySelector('.tab[data-tab="song-index"]').click();
+                })
+                .catch(error => {
+                    alert('Error saving lyric: ' + error.message);
+                });
+            }
         });
         
         // Back to index button
@@ -1063,10 +1132,8 @@
         document.getElementById('search-input').addEventListener('input', (e) => {
             const searchTerm = e.target.value.toLowerCase();
             if (searchTerm === '') {
-                // If search is cleared, show all songs again
                 currentLetter = '';
                 renderSongIndex('song-index-list');
-                // Re-activate the "All" button
                 document.querySelectorAll('#alphabet-index .alphabet-letter').forEach(el => {
                     if (el.textContent === 'அனைத்தும்') {
                         el.classList.add('active');
@@ -1085,10 +1152,8 @@
         document.getElementById('viewer-search-input').addEventListener('input', (e) => {
             const searchTerm = e.target.value.toLowerCase();
             if (searchTerm === '') {
-                // If search is cleared, show all songs again
                 currentLetter = '';
                 renderSongIndex('viewer-song-index');
-                // Re-activate the "All" button
                 document.querySelectorAll('#viewer-alphabet-index .alphabet-letter').forEach(el => {
                     if (el.textContent === 'அனைத்தும்') {
                         el.classList.add('active');
@@ -1142,15 +1207,13 @@
         cancelResetBtn.addEventListener('click', hideResetPasswordForm);
         sendResetBtn.addEventListener('click', sendPasswordResetEmail);
         
-        // Initialize - LOADS SONGS IMMEDIATELY FOR LOGGED IN USERS
+        // Initialize
         window.onload = () => {
-            // Check if user is logged in
             if (auth.currentUser) {
                 authSection.classList.add('hidden');
                 userInfo.classList.remove('hidden');
                 userEmail.textContent = auth.currentUser.email;
                 appContent.classList.remove('hidden');
-                // Load songs immediately if user is logged in
                 loadSongs();
             }
         };
