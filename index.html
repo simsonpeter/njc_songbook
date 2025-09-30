@@ -558,6 +558,7 @@
                     <div class="tab active" data-tab="song-index">Song Index</div>
                     <div class="tab" data-tab="add-lyric">Add Lyric</div>
                     <div class="tab" data-tab="import-sqlite">Import from SQLite</div>
+                    <div class="tab" data-tab="import-xml">Import from XML</div>
                 </div>
                 <div class="lyric-actions">
                     <button id="delete-all-lyrics-btn" class="accent">Delete All Lyrics</button>
@@ -632,6 +633,39 @@
                         <div id="sqlite-import-progress" class="reset-message hidden"></div>
                     </div>
                 </div>
+
+                <div class="tab-content" id="import-xml">
+                    <div class="lyric-form">
+                        <h2>Import from XML</h2>
+                        <div class="form-group">
+                            <label for="xml-files-input">XML files (you can select multiple)</label>
+                            <input type="file" id="xml-files-input" accept=".xml,text/xml" multiple>
+                        </div>
+                        <div class="form-group">
+                            <label for="xml-title-tags">Title element names (comma-separated; auto-detects if blank)</label>
+                            <input type="text" id="xml-title-tags" placeholder="title,songTitle,name,displayname,titles>title">
+                        </div>
+                        <div class="form-group">
+                            <label for="xml-lyrics-tags">Lyrics element names (comma-separated; auto-detects if blank)</label>
+                            <input type="text" id="xml-lyrics-tags" placeholder="lyrics,lyric,text,content,body,verse>lines">
+                        </div>
+                        <div class="form-group">
+                            <label for="xml-default-language">Default language</label>
+                            <select id="xml-default-language">
+                                <option value="Tamil" selected>Tamil</option>
+                                <option value="Telugu">Telugu</option>
+                                <option value="Malayalam">Malayalam</option>
+                                <option value="Kannada">Kannada</option>
+                                <option value="Hindi">Hindi</option>
+                                <option value="">(Unset)</option>
+                            </select>
+                        </div>
+                        <div class="lyric-actions">
+                            <button id="xml-import-btn" class="accent">Start Import</button>
+                        </div>
+                        <div id="xml-import-progress" class="reset-message hidden"></div>
+                    </div>
+                </div>
             </div>
             
             <div id="viewer-content">
@@ -696,6 +730,12 @@
         const sqliteMappingContainer = document.getElementById('sqlite-mapping-container');
         const sqliteImportBtn = document.getElementById('sqlite-import-btn');
         const sqliteImportProgress = document.getElementById('sqlite-import-progress');
+        const xmlFilesInput = document.getElementById('xml-files-input');
+        const xmlTitleTagsInput = document.getElementById('xml-title-tags');
+        const xmlLyricsTagsInput = document.getElementById('xml-lyrics-tags');
+        const xmlDefaultLanguage = document.getElementById('xml-default-language');
+        const xmlImportBtn = document.getElementById('xml-import-btn');
+        const xmlImportProgress = document.getElementById('xml-import-progress');
         
         // Tamil alphabet for indexing (vowels and consonants)
         const tamilAlphabet = [
@@ -1486,6 +1526,157 @@
         if (sqliteTableSelect) sqliteTableSelect.addEventListener('change', onChangeSelectedTable);
         if (sqliteImportBtn) sqliteImportBtn.addEventListener('click', () => {
             importSelectedTable().catch(err => setImportProgress('Import failed: ' + err.message, true));
+        });
+
+        // XML Import
+        function setXmlProgress(message, isError = false) {
+            if (!xmlImportProgress) return;
+            xmlImportProgress.textContent = message;
+            xmlImportProgress.classList.remove('hidden');
+            xmlImportProgress.style.color = isError ? '#c62828' : 'var(--primary-color)';
+        }
+        function clearXmlProgress() {
+            if (!xmlImportProgress) return;
+            xmlImportProgress.textContent = '';
+            xmlImportProgress.classList.add('hidden');
+        }
+        function textFromNode(node) {
+            return (node && node.textContent ? node.textContent : '').trim();
+        }
+        function findByPaths(doc, paths) {
+            for (let p of paths) {
+                const trimmed = p.trim();
+                if (!trimmed) continue;
+                // Support simple 'a>b>c' path
+                const parts = trimmed.split('>').map(s => s.trim()).filter(Boolean);
+                let current = [doc];
+                for (let part of parts) {
+                    const next = [];
+                    current.forEach(n => {
+                        const found = n.getElementsByTagName(part);
+                        for (let i = 0; i < found.length; i++) next.push(found[i]);
+                    });
+                    current = next;
+                    if (current.length === 0) break;
+                }
+                if (current.length > 0) return current;
+            }
+            return [];
+        }
+        function tryOpenLyrics(doc) {
+            const root = doc.documentElement;
+            if (!root) return null;
+            const nameAttr = root.getAttribute('xmlns');
+            if (nameAttr && nameAttr.includes('openlyrics')) {
+                const titles = doc.getElementsByTagName('title');
+                const songTitle = titles.length ? textFromNode(titles[0]) : '';
+                const lines = doc.getElementsByTagName('lines');
+                const parts = [];
+                for (let i = 0; i < lines.length; i++) {
+                    parts.push(textFromNode(lines[i]));
+                }
+                const lyricsText = parts.join('\n').trim();
+                return { songTitle, lyricsText };
+            }
+            return null;
+        }
+        async function importXmlFiles() {
+            clearXmlProgress();
+            const files = (xmlFilesInput && xmlFilesInput.files) ? Array.from(xmlFilesInput.files) : [];
+            if (!files.length) {
+                setXmlProgress('Please select one or more XML files.', true);
+                return;
+            }
+            if (!currentUser || currentUser.email !== 'simsonpeter@gmail.com') {
+                alert('Only admin can import lyrics!');
+                return;
+            }
+            const titlePaths = (xmlTitleTagsInput && xmlTitleTagsInput.value ? xmlTitleTagsInput.value : '').split(',');
+            const lyricsPaths = (xmlLyricsTagsInput && xmlLyricsTagsInput.value ? xmlLyricsTagsInput.value : '').split(',');
+            const defaultLang = xmlDefaultLanguage ? (xmlDefaultLanguage.value || 'Tamil') : 'Tamil';
+            const parser = new DOMParser();
+            const batchSize = 300;
+            let processed = 0;
+            let imported = 0;
+            function updateProgress() {
+                setXmlProgress(`Processed ${processed}/${files.length}. Imported ${imported}.`);
+            }
+            updateProgress();
+            let buffer = [];
+            async function commit() {
+                if (!buffer.length) return;
+                const batch = db.batch();
+                buffer.forEach(docData => {
+                    const ref = db.collection('lyrics').doc();
+                    batch.set(ref, docData);
+                });
+                await batch.commit();
+                buffer = [];
+            }
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const text = await file.text();
+                const doc = parser.parseFromString(text, 'text/xml');
+                let songTitle = '';
+                let lyricsText = '';
+                const ol = tryOpenLyrics(doc);
+                if (ol) {
+                    songTitle = ol.songTitle;
+                    lyricsText = ol.lyricsText;
+                } else {
+                    if (titlePaths.length) {
+                        const nodes = findByPaths(doc, titlePaths);
+                        if (nodes.length) songTitle = textFromNode(nodes[0]);
+                    }
+                    if (lyricsPaths.length) {
+                        const nodes = findByPaths(doc, lyricsPaths);
+                        if (nodes.length) {
+                            const parts = [];
+                            nodes.forEach(n => parts.push(textFromNode(n)));
+                            lyricsText = parts.join('\n').trim();
+                        }
+                    }
+                    if (!songTitle) {
+                        const candidates = ['title','name','songTitle','displayname'];
+                        const nodes = findByPaths(doc, candidates);
+                        if (nodes.length) songTitle = textFromNode(nodes[0]);
+                    }
+                    if (!lyricsText) {
+                        const candidates = ['lyrics','lyric','text','content','body','verse>lines','lines'];
+                        const nodes = findByPaths(doc, candidates);
+                        if (nodes.length) {
+                            const parts = [];
+                            nodes.forEach(n => parts.push(textFromNode(n)));
+                            lyricsText = parts.join('\n').trim();
+                        }
+                    }
+                }
+                if (songTitle && lyricsText) {
+                    buffer.push({
+                        songTitle,
+                        lyricsText,
+                        language: defaultLang,
+                        createdBy: currentUser.uid,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    imported++;
+                }
+                processed++;
+                if (buffer.length >= batchSize) {
+                    await commit();
+                    updateProgress();
+                    await new Promise(r => setTimeout(r, 0));
+                } else {
+                    updateProgress();
+                }
+            }
+            await commit();
+            setXmlProgress(`Done. Imported ${imported} of ${files.length} files.`);
+            loadSongs();
+        }
+        if (xmlImportBtn) xmlImportBtn.addEventListener('click', () => {
+            importXmlFiles().catch(err => setXmlProgress('Import failed: ' + err.message, true));
         });
         
         // Search functionality
