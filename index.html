@@ -7,6 +7,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
     <style>
         :root {
             --primary-color: #4a148c;
@@ -556,6 +557,10 @@
                 <div class="tabs">
                     <div class="tab active" data-tab="song-index">Song Index</div>
                     <div class="tab" data-tab="add-lyric">Add Lyric</div>
+                    <div class="tab" data-tab="import-sqlite">Import from SQLite</div>
+                </div>
+                <div class="lyric-actions">
+                    <button id="delete-all-lyrics-btn" class="accent">Delete All Lyrics</button>
                 </div>
                 
                 <div class="tab-content active" id="song-index">
@@ -606,6 +611,25 @@
                             <textarea id="lyrics-text" placeholder="Enter lyrics here..."></textarea>
                         </div>
                         <button id="save-lyric" class="accent">Save Lyric (சேமிக்கவும்)</button>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="import-sqlite">
+                    <div class="lyric-form">
+                        <h2>Import from SQLite</h2>
+                        <div class="form-group">
+                            <label for="sqlite-file-input">SQLite file (.db, .sqlite, .sqlite3)</label>
+                            <input type="file" id="sqlite-file-input" accept=".db,.sqlite,.sqlite3,application/octet-stream">
+                        </div>
+                        <div class="form-group">
+                            <label for="sqlite-table-select">Select table</label>
+                            <select id="sqlite-table-select"></select>
+                        </div>
+                        <div id="sqlite-mapping-container"></div>
+                        <div class="lyric-actions">
+                            <button id="sqlite-import-btn" class="accent">Start Import</button>
+                        </div>
+                        <div id="sqlite-import-progress" class="reset-message hidden"></div>
                     </div>
                 </div>
             </div>
@@ -666,6 +690,12 @@
         const sendResetBtn = document.getElementById('send-reset-btn');
         const cancelResetBtn = document.getElementById('cancel-reset-btn');
         const resetMessage = document.getElementById('reset-message');
+        const deleteAllLyricsBtn = document.getElementById('delete-all-lyrics-btn');
+        const sqliteFileInput = document.getElementById('sqlite-file-input');
+        const sqliteTableSelect = document.getElementById('sqlite-table-select');
+        const sqliteMappingContainer = document.getElementById('sqlite-mapping-container');
+        const sqliteImportBtn = document.getElementById('sqlite-import-btn');
+        const sqliteImportProgress = document.getElementById('sqlite-import-progress');
         
         // Tamil alphabet for indexing (vowels and consonants)
         const tamilAlphabet = [
@@ -680,6 +710,9 @@
         let currentLetter = '';
         let availableLetters = new Set();
         let currentEditingLyricId = null;
+        let sqlModule = null;
+        let sqliteDb = null;
+        let sqliteColumns = [];
         
         // Initialize Tamil alphabet index based on available songs
         function initAlphabetIndex(containerId) {
@@ -876,6 +909,51 @@
                         alert('Error deleting lyric: ' + error.message);
                     });
             }
+        }
+        
+        // Delete ALL lyrics
+        function deleteAllLyrics() {
+            if (!currentUser || currentUser.email !== 'simsonpeter@gmail.com') {
+                alert('Only admin can delete all lyrics!');
+                return;
+            }
+            if (!confirm('Delete ALL lyrics? This cannot be undone.')) {
+                return;
+            }
+            const batchSize = 500;
+            function deleteQueryBatch() {
+                return db.collection('lyrics').limit(batchSize).get()
+                    .then(snapshot => {
+                        if (snapshot.empty) {
+                            return 0;
+                        }
+                        const batch = db.batch();
+                        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                        return batch.commit().then(() => snapshot.size);
+                    });
+            }
+            function deleteNextBatch() {
+                return deleteQueryBatch().then(numDeleted => {
+                    if (numDeleted === 0) {
+                        return;
+                    }
+                    return new Promise(resolve => setTimeout(resolve, 0)).then(deleteNextBatch);
+                });
+            }
+            deleteNextBatch()
+                .then(() => {
+                    alert('All lyrics deleted successfully.');
+                    songs = [];
+                    currentLetter = '';
+                    renderSongIndex('song-index-list');
+                    renderSongIndex('viewer-song-index');
+                    initAlphabetIndex('alphabet-index');
+                    initAlphabetIndex('viewer-alphabet-index');
+                    backToIndex();
+                })
+                .catch(error => {
+                    alert('Error deleting all lyrics: ' + error.message);
+                });
         }
         
         // Back to index view
@@ -1127,6 +1205,288 @@
         
         // Back to index button
         backToIndexBtn.addEventListener('click', backToIndex);
+        if (deleteAllLyricsBtn) {
+            deleteAllLyricsBtn.addEventListener('click', deleteAllLyrics);
+        }
+
+        // SQLite Import Helpers
+        async function ensureSqlModule() {
+            if (sqlModule) return sqlModule;
+            if (typeof initSqlJs !== 'function') {
+                alert('sql.js failed to load. Check network connectivity.');
+                throw new Error('sql.js not available');
+            }
+            sqlModule = await initSqlJs({
+                locateFile: file => 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/' + file
+            });
+            return sqlModule;
+        }
+
+        function setImportProgress(message, isError = false) {
+            if (!sqliteImportProgress) return;
+            sqliteImportProgress.textContent = message;
+            sqliteImportProgress.classList.remove('hidden');
+            sqliteImportProgress.style.color = isError ? '#c62828' : 'var(--primary-color)';
+        }
+
+        function clearImportProgress() {
+            if (!sqliteImportProgress) return;
+            sqliteImportProgress.textContent = '';
+            sqliteImportProgress.classList.add('hidden');
+        }
+
+        function listTables(dbInstance) {
+            const stmt = dbInstance.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
+            const tables = [];
+            while (stmt.step()) {
+                const row = stmt.getAsObject();
+                if (row.name && row.name !== 'sqlite_sequence') tables.push(row.name);
+            }
+            stmt.free();
+            return tables;
+        }
+
+        function getTableColumns(dbInstance, tableName) {
+            const result = dbInstance.exec(`PRAGMA table_info(${tableName})`);
+            if (!result || result.length === 0) return [];
+            const values = result[0].values;
+            return values.map(v => v[1]); // second column is name
+        }
+
+        function guessColumnMapping(columns) {
+            const lc = columns.map(c => c.toLowerCase());
+            function findMatch(keys) {
+                return columns[lc.findIndex(c => keys.includes(c))] || '';
+            }
+            return {
+                songTitle: findMatch(['songtitle','title','name','song_title','song']),
+                lyricsText: findMatch(['lyricstext','lyrics','text','content','body']),
+                language: findMatch(['language','lang']),
+                lyricist: findMatch(['lyricist','writer','author']),
+                musicDirector: findMatch(['musicdirector','music_director','composer','music']),
+                singer: findMatch(['singer','vocal','artist','sungby','sung_by']),
+                movieName: findMatch(['moviename','movie','film','album']),
+                createdAt: findMatch(['createdat','created_at','created','date','timestamp','createdon','created_on'])
+            };
+        }
+
+        function buildMappingUI() {
+            if (!sqliteMappingContainer || !sqliteColumns) return;
+            sqliteMappingContainer.innerHTML = '';
+            const mapping = guessColumnMapping(sqliteColumns);
+            const fields = [
+                { key: 'songTitle', label: 'Song Title (required)', required: true },
+                { key: 'lyricsText', label: 'Lyrics Text (required)', required: true },
+                { key: 'language', label: 'Language', required: false },
+                { key: 'lyricist', label: 'Lyricist', required: false },
+                { key: 'musicDirector', label: 'Music Director', required: false },
+                { key: 'singer', label: 'Singer', required: false },
+                { key: 'movieName', label: 'Movie Name', required: false },
+                { key: 'createdAt', label: 'Created At (date/timestamp)', required: false }
+            ];
+            fields.forEach(f => {
+                const group = document.createElement('div');
+                group.className = 'form-group';
+
+                const label = document.createElement('label');
+                label.setAttribute('for', `map-${f.key}`);
+                label.textContent = f.label;
+
+                const select = document.createElement('select');
+                select.id = `map-${f.key}`;
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = f.required ? 'Choose column...' : '(Not set)';
+                select.appendChild(defaultOption);
+                sqliteColumns.forEach(col => {
+                    const opt = document.createElement('option');
+                    opt.value = col;
+                    opt.textContent = col;
+                    if (mapping[f.key] && mapping[f.key] === col) opt.selected = true;
+                    select.appendChild(opt);
+                });
+
+                group.appendChild(label);
+                group.appendChild(select);
+                sqliteMappingContainer.appendChild(group);
+            });
+        }
+
+        async function handleSqliteFileChange(e) {
+            clearImportProgress();
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            setImportProgress('Loading SQLite module...');
+            try {
+                const SQL = await ensureSqlModule();
+                setImportProgress('Reading database file...');
+                const arrayBuffer = await file.arrayBuffer();
+                sqliteDb = new SQL.Database(new Uint8Array(arrayBuffer));
+                const tables = listTables(sqliteDb);
+                sqliteTableSelect.innerHTML = '';
+                if (tables.length === 0) {
+                    setImportProgress('No tables found in database.', true);
+                    return;
+                }
+                tables.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t;
+                    opt.textContent = t;
+                    sqliteTableSelect.appendChild(opt);
+                });
+                const lyricsTableIdx = tables.findIndex(t => t.toLowerCase() === 'lyrics');
+                if (lyricsTableIdx >= 0) sqliteTableSelect.selectedIndex = lyricsTableIdx;
+                sqliteColumns = getTableColumns(sqliteDb, sqliteTableSelect.value);
+                buildMappingUI();
+                setImportProgress(`Loaded. Tables: ${tables.length}. Selected: ${sqliteTableSelect.value}`);
+            } catch (err) {
+                console.error(err);
+                setImportProgress('Failed to open SQLite file: ' + err.message, true);
+            }
+        }
+
+        function onChangeSelectedTable() {
+            if (!sqliteDb) return;
+            sqliteColumns = getTableColumns(sqliteDb, sqliteTableSelect.value);
+            buildMappingUI();
+            setImportProgress(`Selected table: ${sqliteTableSelect.value}`);
+        }
+
+        function readMappingSelection() {
+            const getVal = key => {
+                const el = document.getElementById(`map-${key}`);
+                return el ? el.value : '';
+            };
+            return {
+                songTitle: getVal('songTitle'),
+                lyricsText: getVal('lyricsText'),
+                language: getVal('language'),
+                lyricist: getVal('lyricist'),
+                musicDirector: getVal('musicDirector'),
+                singer: getVal('singer'),
+                movieName: getVal('movieName'),
+                createdAt: getVal('createdAt')
+            };
+        }
+
+        function coerceToTimestamp(value) {
+            if (value == null) return null;
+            if (typeof value === 'number') {
+                if (value > 1e12) return new Date(value);
+                if (value > 1e9) return new Date(value * 1000);
+                return new Date(value);
+            }
+            if (typeof value === 'string') {
+                const n = Number(value);
+                if (!isNaN(n)) return coerceToTimestamp(n);
+                const d = new Date(value);
+                if (!isNaN(d.getTime())) return d;
+            }
+            return null;
+        }
+
+        async function importSelectedTable() {
+            clearImportProgress();
+            if (!sqliteDb) {
+                setImportProgress('Please choose a SQLite file first.', true);
+                return;
+            }
+            if (!currentUser || currentUser.email !== 'simsonpeter@gmail.com') {
+                alert('Only admin can import lyrics!');
+                return;
+            }
+            const tableName = sqliteTableSelect.value;
+            const map = readMappingSelection();
+            if (!map.songTitle || !map.lyricsText) {
+                setImportProgress('Please map required fields: Song Title and Lyrics Text.', true);
+                return;
+            }
+            setImportProgress('Reading rows from SQLite...');
+            const result = sqliteDb.exec(`SELECT * FROM ${tableName}`);
+            if (!result || result.length === 0) {
+                setImportProgress('No rows found to import.', true);
+                return;
+            }
+            const rows = [];
+            const columns = result[0].columns;
+            const values = result[0].values;
+            const columnIndex = {};
+            columns.forEach((c, i) => { columnIndex[c] = i; });
+            values.forEach(v => {
+                const rowObj = {};
+                columns.forEach((c, i) => { rowObj[c] = v[i]; });
+                rows.push(rowObj);
+            });
+
+            const total = rows.length;
+            let processed = 0;
+            const batchSize = 400;
+            function updateProgress() {
+                setImportProgress(`Importing ${processed}/${total}...`);
+            }
+            updateProgress();
+
+            async function commitBatch(batchDocs) {
+                const batch = db.batch();
+                batchDocs.forEach(docData => {
+                    const ref = db.collection('lyrics').doc();
+                    batch.set(ref, docData);
+                });
+                await batch.commit();
+            }
+
+            let buffer = [];
+            for (let i = 0; i < rows.length; i++) {
+                const r = rows[i];
+                const get = (col) => (col && r[col] != null ? r[col] : '');
+                const songTitle = String(get(map.songTitle)).trim();
+                const lyricsText = String(get(map.lyricsText)).trim();
+                if (!songTitle || !lyricsText) {
+                    processed++;
+                    updateProgress();
+                    continue;
+                }
+                const createdAtRaw = map.createdAt ? r[map.createdAt] : null;
+                const createdAtDate = coerceToTimestamp(createdAtRaw);
+                const docData = {
+                    songTitle,
+                    movieName: String(get(map.movieName)).trim() || '',
+                    musicDirector: String(get(map.musicDirector)).trim() || '',
+                    lyricist: String(get(map.lyricist)).trim() || '',
+                    singer: String(get(map.singer)).trim() || '',
+                    language: String(get(map.language)).trim() || 'Tamil',
+                    lyricsText,
+                    createdBy: currentUser.uid,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                if (createdAtDate) {
+                    docData.createdAt = createdAtDate;
+                } else {
+                    docData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                }
+                buffer.push(docData);
+                if (buffer.length >= batchSize) {
+                    await commitBatch(buffer);
+                    processed += buffer.length;
+                    buffer = [];
+                    updateProgress();
+                    await new Promise(r => setTimeout(r, 0));
+                }
+            }
+            if (buffer.length > 0) {
+                await commitBatch(buffer);
+                processed += buffer.length;
+                updateProgress();
+            }
+            setImportProgress(`Import complete. Imported ${processed} documents.`);
+            loadSongs();
+        }
+
+        if (sqliteFileInput) sqliteFileInput.addEventListener('change', handleSqliteFileChange);
+        if (sqliteTableSelect) sqliteTableSelect.addEventListener('change', onChangeSelectedTable);
+        if (sqliteImportBtn) sqliteImportBtn.addEventListener('click', () => {
+            importSelectedTable().catch(err => setImportProgress('Import failed: ' + err.message, true));
+        });
         
         // Search functionality
         document.getElementById('search-input').addEventListener('input', (e) => {
