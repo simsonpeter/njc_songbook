@@ -557,6 +557,9 @@
                     <div class="tab active" data-tab="song-index">Song Index</div>
                     <div class="tab" data-tab="add-lyric">Add Lyric</div>
                 </div>
+                <div class="lyric-actions">
+                    <button id="delete-all-lyrics-btn" class="accent">Delete All Lyrics</button>
+                </div>
                 
                 <div class="tab-content active" id="song-index">
                     <div class="search-bar">
@@ -666,6 +669,7 @@
         const sendResetBtn = document.getElementById('send-reset-btn');
         const cancelResetBtn = document.getElementById('cancel-reset-btn');
         const resetMessage = document.getElementById('reset-message');
+        const deleteAllLyricsBtn = document.getElementById('delete-all-lyrics-btn');
         
         // Tamil alphabet for indexing (vowels and consonants)
         const tamilAlphabet = [
@@ -876,6 +880,51 @@
                         alert('Error deleting lyric: ' + error.message);
                     });
             }
+        }
+        
+        // Delete ALL lyrics
+        function deleteAllLyrics() {
+            if (!currentUser || currentUser.email !== 'simsonpeter@gmail.com') {
+                alert('Only admin can delete all lyrics!');
+                return;
+            }
+            if (!confirm('Delete ALL lyrics? This cannot be undone.')) {
+                return;
+            }
+            const batchSize = 500;
+            function deleteQueryBatch() {
+                return db.collection('lyrics').limit(batchSize).get()
+                    .then(snapshot => {
+                        if (snapshot.empty) {
+                            return 0;
+                        }
+                        const batch = db.batch();
+                        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                        return batch.commit().then(() => snapshot.size);
+                    });
+            }
+            function deleteNextBatch() {
+                return deleteQueryBatch().then(numDeleted => {
+                    if (numDeleted === 0) {
+                        return;
+                    }
+                    return new Promise(resolve => setTimeout(resolve, 0)).then(deleteNextBatch);
+                });
+            }
+            deleteNextBatch()
+                .then(() => {
+                    alert('All lyrics deleted successfully.');
+                    songs = [];
+                    currentLetter = '';
+                    renderSongIndex('song-index-list');
+                    renderSongIndex('viewer-song-index');
+                    initAlphabetIndex('alphabet-index');
+                    initAlphabetIndex('viewer-alphabet-index');
+                    backToIndex();
+                })
+                .catch(error => {
+                    alert('Error deleting all lyrics: ' + error.message);
+                });
         }
         
         // Back to index view
@@ -1127,6 +1176,9 @@
         
         // Back to index button
         backToIndexBtn.addEventListener('click', backToIndex);
+        if (deleteAllLyricsBtn) {
+            deleteAllLyricsBtn.addEventListener('click', deleteAllLyrics);
+        }
         
         // Search functionality
         document.getElementById('search-input').addEventListener('input', (e) => {
