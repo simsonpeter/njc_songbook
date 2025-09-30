@@ -924,6 +924,11 @@
                         document.querySelector('#add-lyric h2').textContent = 'Edit Tamil Lyric';
                         document.getElementById('save-lyric').textContent = 'Update Lyric (மேம்படுத்தவும்)';
                         
+                        // Show admin controls and hide detail view before switching tab
+                        lyricDetailView.classList.add('hidden');
+                        adminControls.classList.remove('hidden');
+                        viewerContent.classList.add('hidden');
+
                         // Switch to the add-lyric tab
                         document.querySelector('.tab[data-tab="add-lyric"]').click();
                         
