@@ -252,25 +252,6 @@
             display: none !important;
         }
 
-        .search-results-info {
-            text-align: center;
-            padding: 40px 20px;
-            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-            border-radius: 10px;
-            margin: 20px 10px;
-            border: 1px solid #dee2e6;
-        }
-
-        .search-results-info p {
-            margin: 0;
-            color: #6c757d;
-            font-size: 1rem;
-        }
-
-        .search-results-info i {
-            color: var(--primary-color);
-            margin-right: 8px;
-        }
         
         .tabs {
             display: flex;
@@ -2452,12 +2433,9 @@
                     <h2><i class="fas fa-search"></i> Search Songs</h2>
                     <input type="text" id="search-input" placeholder="Search songs...">
                 </div>
-                <div class="search-results-info" id="search-results-info">
-                    <p><i class="fas fa-info-circle"></i> Type in the search box above to begin searching</p>
-                </div>
-                <div class="alphabet-index hidden" id="search-alphabet-index"></div>
+                <div class="alphabet-index" id="search-alphabet-index"></div>
                 <div id="search-song-index-container">
-                    <div class="song-index hidden" id="search-song-index"></div>
+                    <div class="song-index" id="search-song-index"></div>
                 </div>
             `;
             
@@ -2470,9 +2448,6 @@
         // Setup search tab functionality
         function setupSearchTab() {
             const searchInput = document.getElementById('search-input');
-            const searchResultsInfo = document.getElementById('search-results-info');
-            const searchAlphabetIndex = document.getElementById('search-alphabet-index');
-            const searchSongIndex = document.getElementById('search-song-index');
             
             if (searchInput) {
                 searchInput.focus(); // Auto-focus on search tab
@@ -2480,16 +2455,18 @@
                     const searchTerm = e.target.value.toLowerCase();
                     
                     if (searchTerm === '') {
-                        // Empty search - show info message, hide results
-                        if (searchResultsInfo) searchResultsInfo.classList.remove('hidden');
-                        if (searchAlphabetIndex) searchAlphabetIndex.classList.add('hidden');
-                        if (searchSongIndex) searchSongIndex.classList.add('hidden');
+                        // Empty search - show all songs (like Songs tab)
+                        currentLetter = '';
+                        renderSongIndex('search-song-index');
+                        document.querySelectorAll('#search-alphabet-index .alphabet-letter').forEach(el => {
+                            if (el.textContent === 'அனைத்தும்') {
+                                el.classList.add('active');
+                            } else {
+                                el.classList.remove('active');
+                            }
+                        });
                     } else {
-                        // Has search term - hide info message, show results
-                        if (searchResultsInfo) searchResultsInfo.classList.add('hidden');
-                        if (searchAlphabetIndex) searchAlphabetIndex.classList.remove('hidden');
-                        if (searchSongIndex) searchSongIndex.classList.remove('hidden');
-                        
+                        // Has search term - show filtered results
                         const filteredSongs = songs.filter(song => 
                             song.songTitle.toLowerCase().includes(searchTerm)
                         );
@@ -2498,8 +2475,19 @@
                 });
             }
             
-            // Initialize alphabet index (but keep it hidden initially)
+            // Initialize alphabet and songs (like Songs tab)
+            currentLetter = '';
+            renderSongIndex('search-song-index');
             initAlphabetIndex('search-alphabet-index');
+        
+            // Activate the "All" button by default
+            document.querySelectorAll('#search-alphabet-index .alphabet-letter').forEach(el => {
+                if (el.textContent === 'அனைத்தும்') {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
         }
 
         // Show favorites
