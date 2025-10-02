@@ -33,6 +33,11 @@ class SongDatabase {
                 if (!db.objectStoreNames.contains('syncMetadata')) {
                     db.createObjectStore('syncMetadata', { keyPath: 'key' });
                 }
+                
+                // Create favorites store
+                if (!db.objectStoreNames.contains('favorites')) {
+                    db.createObjectStore('favorites', { keyPath: 'songId' });
+                }
             };
         });
     }
@@ -143,6 +148,74 @@ class SongDatabase {
         return new Promise((resolve, reject) => {
             const request = store.count();
             request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    // Favorite management methods
+    async toggleFavorite(songId) {
+        if (!this.db) await this.init();
+        
+        const transaction = this.db.transaction(['favorites'], 'readwrite');
+        const store = transaction.objectStore('favorites');
+        
+        return new Promise((resolve, reject) => {
+            // Check if already favorited
+            const getRequest = store.get(songId);
+            getRequest.onsuccess = () => {
+                if (getRequest.result) {
+                    // Remove from favorites
+                    store.delete(songId).onsuccess = () => resolve(false);
+                } else {
+                    // Add to favorites
+                    store.put({ 
+                        songId: songId, 
+                        addedAt: new Date().toISOString() 
+                    }).onsuccess = () => resolve(true);
+                }
+            };
+            getRequest.onerror = () => reject(getRequest.error);
+        });
+    }
+
+    async getFavoriteIds() {
+        if (!this.db) await this.init();
+        
+        const transaction = this.db.transaction(['favorites'], 'readonly');
+        const store = transaction.objectStore('favorites');
+        
+        return new Promise((resolve, reject) => {
+            const request = store.getAll();
+            request.onsuccess = () => {
+                const favorites = request.result.map(fav => fav.songId);
+                resolve(favorites);
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async isFavorite(songId) {
+        if (!this.db) await this.init();
+        
+        const transaction = this.db.transaction(['favorites'], 'readonly');
+        const store = transaction.objectStore('favorites');
+        
+        return new Promise((resolve, reject) => {
+            const request = store.get(songId);
+            request.onsuccess = () => resolve(!!request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async removeAllFavorites() {
+        if (!this.db) await this.init();
+        
+        const transaction = this.db.transaction(['favorites'], 'readwrite');
+        const store = transaction.objectStore('favorites');
+        
+        return new Promise((resolve, reject) => {
+            const request = store.clear();
+            request.onsuccess = () => resolve();
             request.onerror = () => reject(request.error);
         });
     }
