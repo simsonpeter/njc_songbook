@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="cache-control" content="no-cache, no-store, must-revalidate">
-    <title>NJC Song Book</title>
+    <meta name="pragma" content="no-cache">
+    <meta name="expires" content="0">
+    <title>NJC Song Book v20251002-072358</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
@@ -993,6 +995,7 @@
         let isInitialized = false;
         let isSyncing = false;
         let currentTab = 'songs';
+        let tabsInitialized = false;
         let pullToRefresh = {
             startY: 0,
             currentY: 0,
@@ -1329,6 +1332,10 @@
         
         // Tab switching
         function setupTabs() {
+            if (tabsInitialized) {
+                return; // Prevent duplicate initialization
+            }
+            
             const tabs = document.querySelectorAll('.tab');
             const tabContents = document.querySelectorAll('.tab-content');
             
@@ -1344,7 +1351,7 @@
                     if (tabId === 'song-index') {
                         loadSongs();
                     } else if (tabId === 'add-lyric') {
-                        // Reset form when switching to add lyric tab
+                        // Prevent form clearing when editing
                         if (!currentEditingLyricId) {
                             document.querySelector('#add-lyric h2').textContent = 'Add New Tamil Lyric';
                             document.getElementById('save-lyric').textContent = 'Save Lyric (சேமிக்கவும்)';
@@ -1359,6 +1366,8 @@
                     }
                 });
             });
+            
+            tabsInitialized = true;
         }
         
         // Password reset functions
