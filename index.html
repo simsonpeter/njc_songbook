@@ -993,6 +993,7 @@
         let isInitialized = false;
         let isSyncing = false;
         let currentTab = 'songs';
+        let originalViewerContent = null; // Store original viewer content
         let pullToRefresh = {
             startY: 0,
             currentY: 0,
@@ -2215,6 +2216,8 @@
                 document.getElementById('admin-controls').classList.remove('hidden');
                 document.querySelector('.tab[data-tab="song-index"]').click();
             } else if (tab === 'songs' || tab === 'search') {
+                // Restore original viewer content before showing
+                restoreViewerContent();
                 document.getElementById('viewer-content').classList.remove('hidden');
             } else if (tab === 'profile') {
                 // Show user profile info
@@ -2225,6 +2228,12 @@
         // Show profile information
         function showProfile() {
             const viewerContent = document.getElementById('viewer-content');
+            
+            // Store original content if not already stored
+            if (!originalViewerContent) {
+                originalViewerContent = viewerContent.innerHTML;
+            }
+            
             viewerContent.innerHTML = `
                 <div class="lyric-form">
                     <h2><i class="fas fa-user"></i> Profile</h2>
@@ -2265,6 +2274,63 @@
             });
             
             viewerContent.classList.remove('hidden');
+        }
+
+        // Restore original viewer content
+        function restoreViewerContent() {
+            const viewerContent = document.getElementById('viewer-content');
+            if (originalViewerContent) {
+                viewerContent.innerHTML = originalViewerContent;
+                           
+                // Re-render songs to ensure proper functionality
+                if (songs.length > 0) {
+                    renderSongIndex('viewer-song-index');
+                    initAlphabetIndex('viewer-alphabet-index');
+                }
+                
+                // Re-attach search functionality
+                const searchInput = document.getElementById('viewer-search-input');
+                if (searchInput && !searchInput.hasAttribute('data-attached')) {
+                    searchInput.addEventListener('input', (e) => {
+                        const searchTerm = e.target.value.toLowerCase();
+                        if (searchTerm === '') {
+                            currentLetter = '';
+                            renderSongIndex('viewer-song-index');
+                            document.querySelectorAll('#viewer-alphabet-index .alphabet-letter').forEach(el => {
+                                if (el.textContent === 'அனைத்தும்') {
+                                    el.classList.add('active');
+                                } else {
+                                    el.classList.remove('active');
+                                }
+                            });
+                        } else {
+                            const filteredSongs = songs.filter(song => 
+                                song.songTitle.toLowerCase().includes(searchTerm)
+                            );
+                            renderFilteredSongs(filteredSongs, 'viewer-song-index');
+                        }
+                    });
+                    searchInput.setAttribute('data-attached', 'true');
+                }
+                
+                // Re-attach alphabet index click handlers
+                document.querySelectorAll('#viewer-alphabet-index .alphabet-letter').forEach(el => {
+                    if (!el.hasAttribute('data-attached')) {
+                        el.addEventListener('click', () => {
+                            if (el.textContent === 'அனைத்தும்') {
+                                currentLetter = '';
+                                renderSongIndex('viewer-song-index');
+                            } else {
+                                currentLetter = el.textContent;
+                                renderSongIndex('viewer-song-index');
+                            }
+                            document.querySelectorAll('#viewer-alphabet-index .alphabet-letter').forEach(el2 => el2.classList.remove('active'));
+                            el.classList.add('active');
+                        });
+                        el.setAttribute('data-attached', 'true');
+                    }
+                });
+            }
         }
 
         // Load profile data
@@ -2432,6 +2498,12 @@
                 
                 isInitialized = true;
                 await loadSongs();
+                
+                // Store original viewer content for profile tab restoration
+                const viewerContent = document.getElementById('viewer-content');
+                if (viewerContent && !originalViewerContent) {
+                    originalViewerContent = viewerContent.innerHTML;
+                }
             }
         };
     </script>
