@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NJC Song Book</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+    <script src="db.js"></script>
     <style>
         :root {
             --primary-color: #4a148c;
@@ -27,7 +29,8 @@
             padding: 0;
             background-color: #f5f5f5;
             color: #333;
-            padding-top: 180px;
+            padding-top: 80px;
+            padding-bottom: 80px;
         }
         
         .container {
@@ -39,9 +42,9 @@
         header {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
-            padding: 20px 0;
+            padding: 15px 0;
             text-align: center;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             position: fixed;
             width: 100%;
             top: 0;
@@ -57,15 +60,16 @@
         
         h1 {
             margin: 0;
-            font-size: 2.5rem;
+            font-size: 1.5rem;
             font-weight: 700;
         }
         
         h2.tamil-title {
-            margin: 5px 0 0 0;
-            font-size: 1.5rem;
+            margin: 2px 0 0 0;
+            font-size: 0.9rem;
             font-weight: normal;
             font-family: 'Arial Unicode MS', 'Tahoma', sans-serif;
+            opacity: 0.9;
         }
         
         .auth-section {
@@ -344,12 +348,212 @@
         
         .user-info {
             position: absolute;
-            top: 20px;
-            right: 20px;
+            top: 15px;
+            right: 15px;
             color: white;
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
+        }
+
+        .user-info button {
+            padding: 6px 10px;
+            font-size: 0.8rem;
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #4caf50;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.offline {
+            background-color: #f44336;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .sync-status {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            z-index: 10000;
+            display: none;
+            text-align: center;
+        }
+
+        .sync-status.show {
+            display: block;
+        }
+
+        .sync-button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .sync-button:hover {
+            background-color: #c2185b;
+            transform: scale(1.05);
+        }
+
+        .sync-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .sync-button .spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .pull-to-refresh {
+            position: fixed;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 0 0 10px 10px;
+            z-index: 1000;
+            transition: top 0.3s ease;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .pull-to-refresh.show {
+            top: 0;
+        }
+
+        .pull-to-refresh .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        /* Bottom Tab Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            z-index: 1000;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #666;
+            text-decoration: none;
+            min-width: 60px;
+        }
+
+        .nav-item.active {
+            color: var(--primary-color);
+        }
+
+        .nav-item i {
+            font-size: 1.2rem;
+            margin-bottom: 4px;
+        }
+
+        .nav-item span {
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        /* Mobile-specific styles */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .lyrics-list {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .lyric-card {
+                padding: 15px;
+            }
+            
+            .song-index {
+                column-count: 1;
+            }
+            
+            .alphabet-index {
+                gap: 6px;
+                margin-bottom: 20px;
+            }
+            
+            .alphabet-letter {
+                padding: 6px 10px;
+                min-width: 35px;
+                font-size: 1rem;
+            }
         }
         
         .user-info span {
@@ -523,9 +727,13 @@
         <div class="header-content">
             <h1>NJC Song Book</h1>
             <h2 class="tamil-title">பாடல் புத்தகம்</h2>
+            <div id="status-indicator" class="status-indicator hidden">
+                <div id="status-dot" class="status-dot"></div>
+                <span id="status-text">Online</span>
+            </div>
             <div id="user-info" class="user-info hidden">
                 <span id="user-email"></span>
-                <button id="logout-btn">Sign Out</button>
+                <button id="logout-btn"><i class="fas fa-sign-out-alt"></i></button>
             </div>
         </div>
     </header>
@@ -555,13 +763,17 @@
         <div id="app-content" class="hidden">
             <div id="admin-controls" class="hidden">
                 <div class="tabs">
-                    <div class="tab active" data-tab="song-index">Song Index</div>
-                    <div class="tab" data-tab="add-lyric">Add Lyric</div>
-                    <div class="tab" data-tab="import-sqlite">Import from SQLite</div>
-                    <div class="tab" data-tab="import-xml">Import from XML</div>
+                    <div class="tab active" data-tab="song-index"><i class="fas fa-list"></i> Songs</div>
+                    <div class="tab" data-tab="add-lyric"><i class="fas fa-plus"></i> Add</div>
+                    <div class="tab" data-tab="import-sqlite"><i class="fas fa-database"></i> SQLite</div>
+                    <div class="tab" data-tab="import-xml"><i class="fas fa-file-code"></i> XML</div>
                 </div>
                 <div class="lyric-actions">
-                    <button id="delete-all-lyrics-btn" class="accent">Delete All Lyrics</button>
+                    <button id="sync-btn" class="sync-button" title="Sync songs">
+                        <i id="sync-icon" class="fas fa-sync-alt"></i>
+                        <span id="sync-text">Sync</span>
+                    </button>
+                    <button id="delete-all-lyrics-btn" class="accent"><i class="fas fa-trash"></i> Delete All</button>
                 </div>
                 
                 <div class="tab-content active" id="song-index">
@@ -679,10 +891,40 @@
             </div>
             
             <div id="lyric-detail-view" class="hidden">
-                <button id="back-to-index" class="accent back-button">← Back to Index</button>
+                <button id="back-to-index" class="accent back-button"><i class="fas fa-arrow-left"></i> Back to Index</button>
                 <div class="lyric-detail-container" id="lyric-detail-content"></div>
             </div>
         </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div id="bottom-nav" class="bottom-nav hidden">
+        <a href="#" class="nav-item active" data-tab="songs">
+            <i class="fas fa-music"></i>
+            <span>Songs</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="search">
+            <i class="fas fa-search"></i>
+            <span>Search</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="admin" id="admin-nav-item">
+            <i class="fas fa-cog"></i>
+            <span>Admin</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="profile">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+
+    <div id="sync-status" class="sync-status">
+        <div id="sync-message">Syncing songs...</div>
+        <div id="sync-progress"></div>
+    </div>
+
+    <div id="pull-to-refresh" class="pull-to-refresh">
+        <span class="spinner"></span>
+        <span id="pull-text">Pull to refresh</span>
     </div>
 
     <script>
@@ -753,6 +995,16 @@
         let sqlModule = null;
         let sqliteDb = null;
         let sqliteColumns = [];
+        let isOnline = navigator.onLine;
+        let isInitialized = false;
+        let isSyncing = false;
+        let currentTab = 'songs';
+        let pullToRefresh = {
+            startY: 0,
+            currentY: 0,
+            isPulling: false,
+            threshold: 80
+        };
         
         // Initialize Tamil alphabet index based on available songs
         function initAlphabetIndex(containerId) {
@@ -855,51 +1107,75 @@
         }
         
         // View lyric detail
-        function viewLyric(lyricId) {
-            db.collection('lyrics').doc(lyricId).get()
-                .then(doc => {
-                    if (doc.exists) {
-                        const lyric = doc.data();
-                        currentEditingLyricId = lyricId;
-                        
-                        let adminControlsHTML = '';
-                        if (currentUser && currentUser.email === 'simsonpeter@gmail.com') {
-                            adminControlsHTML = `
-                                <div style="margin-top: 30px;">
-                                    <button class="accent" onclick="editLyric()">Edit Lyric</button>
-                                    <button class="accent" onclick="deleteLyric('${lyricId}')">Delete Lyric</button>
-                                </div>
-                            `;
+        async function viewLyric(lyricId) {
+            try {
+                let lyric;
+                
+                if (isOnline) {
+                    try {
+                        // Try to get from Firebase first
+                        const doc = await db.collection('lyrics').doc(lyricId).get();
+                        if (doc.exists) {
+                            lyric = doc.data();
+                        } else {
+                            throw new Error('Document not found in Firebase');
                         }
-                        
-                        lyricDetailContent.innerHTML = `
-                            <h2>${lyric.songTitle}</h2>
-                            <div class="lyric-meta">
-                                <span>${lyric.language}</span>
-                                <span>${new Date(lyric.createdAt?.toDate()).toLocaleDateString()}</span>
-                            </div>
-                            
-                            <div class="meta-item">
-                                ${lyric.movieName ? `<p><strong>Movie:</strong> ${lyric.movieName}</p>` : ''}
-                                ${lyric.musicDirector ? `<p><strong>Music:</strong> ${lyric.musicDirector}</p>` : ''}
-                                ${lyric.lyricist ? `<p><strong>Lyrics:</strong> ${lyric.lyricist}</p>` : ''}
-                                ${lyric.singer ? `<p><strong>Singer:</strong> ${lyric.singer}</p>` : ''}
-                            </div>
-                            
-                            <div class="lyric-text">${lyric.lyricsText}</div>
-                            ${adminControlsHTML}
-                        `;
-                        
-                        viewerContent.classList.add('hidden');
-                        adminControls.classList.add('hidden');
-                        lyricDetailView.classList.remove('hidden');
-                    } else {
-                        alert('Lyric not found!');
+                    } catch (error) {
+                        console.log('Firebase fetch failed, trying local storage:', error);
+                        // Fallback to local storage
+                        lyric = await songDB.getSongById(lyricId);
+                        if (!lyric) {
+                            throw new Error('Lyric not found in local storage');
+                        }
                     }
-                })
-                .catch(error => {
-                    alert('Error loading lyric: ' + error.message);
-                });
+                } else {
+                    // Load from local storage when offline
+                    lyric = await songDB.getSongById(lyricId);
+                    if (!lyric) {
+                        throw new Error('Lyric not found in local storage');
+                    }
+                }
+                
+                currentEditingLyricId = lyricId;
+                
+                let adminControlsHTML = '';
+                if (currentUser && currentUser.email === 'simsonpeter@gmail.com') {
+                    adminControlsHTML = `
+                        <div style="margin-top: 30px;">
+                            <button class="accent" onclick="editLyric()">Edit Lyric</button>
+                            <button class="accent" onclick="deleteLyric('${lyricId}')">Delete Lyric</button>
+                        </div>
+                    `;
+                }
+                
+                const createdDate = lyric.createdAt?.toDate ? 
+                    new Date(lyric.createdAt.toDate()).toLocaleDateString() : 
+                    (lyric.createdAt ? new Date(lyric.createdAt).toLocaleDateString() : 'Unknown');
+                
+                lyricDetailContent.innerHTML = `
+                    <h2>${lyric.songTitle}</h2>
+                    <div class="lyric-meta">
+                        <span>${lyric.language}</span>
+                        <span>${createdDate}</span>
+                    </div>
+                    
+                    <div class="meta-item">
+                        ${lyric.movieName ? `<p><strong>Movie:</strong> ${lyric.movieName}</p>` : ''}
+                        ${lyric.musicDirector ? `<p><strong>Music:</strong> ${lyric.musicDirector}</p>` : ''}
+                        ${lyric.lyricist ? `<p><strong>Lyrics:</strong> ${lyric.lyricist}</p>` : ''}
+                        ${lyric.singer ? `<p><strong>Singer:</strong> ${lyric.singer}</p>` : ''}
+                    </div>
+                    
+                    <div class="lyric-text">${lyric.lyricsText}</div>
+                    ${adminControlsHTML}
+                `;
+                
+                viewerContent.classList.add('hidden');
+                adminControls.classList.add('hidden');
+                lyricDetailView.classList.remove('hidden');
+            } catch (error) {
+                alert('Error loading lyric: ' + error.message);
+            }
         }
         
         // Edit lyric
@@ -1012,10 +1288,12 @@
             }
         }
         
-        // Load all songs
-        function loadSongs() {
-            db.collection('lyrics').orderBy('songTitle').get()
-                .then(querySnapshot => {
+        // Load all songs from Firebase or local storage
+        async function loadSongs() {
+            if (isOnline) {
+                try {
+                    // Try to load from Firebase first
+                    const querySnapshot = await db.collection('lyrics').orderBy('songTitle').get();
                     songs = [];
                     querySnapshot.forEach(doc => {
                         songs.push({
@@ -1024,25 +1302,35 @@
                         });
                     });
                     
-                    updateAvailableLetters();
-                    currentLetter = '';
-                    renderSongIndex('song-index-list');
-                    renderSongIndex('viewer-song-index');
-                    initAlphabetIndex('alphabet-index');
-                    initAlphabetIndex('viewer-alphabet-index');
-                    
-                    // Activate the "All" button by default
-                    document.querySelectorAll('.alphabet-index .alphabet-letter').forEach(el => {
-                        if (el.textContent === 'அனைத்தும்') {
-                            el.classList.add('active');
-                        } else {
-                            el.classList.remove('active');
-                        }
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading songs: ', error);
-                });
+                    // Save to local storage
+                    await songDB.saveSongs(songs);
+                    console.log(`Synced ${songs.length} songs to local storage`);
+                } catch (error) {
+                    console.error('Error loading from Firebase, trying local storage:', error);
+                    // Fallback to local storage
+                    songs = await songDB.getAllSongs();
+                }
+            } else {
+                // Load from local storage when offline
+                songs = await songDB.getAllSongs();
+                console.log(`Loaded ${songs.length} songs from local storage (offline mode)`);
+            }
+            
+            updateAvailableLetters();
+            currentLetter = '';
+            renderSongIndex('song-index-list');
+            renderSongIndex('viewer-song-index');
+            initAlphabetIndex('alphabet-index');
+            initAlphabetIndex('viewer-alphabet-index');
+            
+            // Activate the "All" button by default
+            document.querySelectorAll('.alphabet-index .alphabet-letter').forEach(el => {
+                if (el.textContent === 'அனைத்தும்') {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
         }
         
         // Tab switching
@@ -1763,14 +2051,386 @@
         cancelResetBtn.addEventListener('click', hideResetPasswordForm);
         sendResetBtn.addEventListener('click', sendPasswordResetEmail);
         
+        // Online/Offline status management
+        function updateOnlineStatus() {
+            isOnline = navigator.onLine;
+            const statusIndicator = document.getElementById('status-indicator');
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+            
+            if (statusIndicator) {
+                statusIndicator.classList.remove('hidden');
+                if (isOnline) {
+                    statusDot.classList.remove('offline');
+                    statusText.textContent = 'Online';
+                } else {
+                    statusDot.classList.add('offline');
+                    statusText.textContent = 'Offline';
+                }
+            }
+        }
+
+        // Manual sync function
+        async function manualSync() {
+            if (isSyncing || !isOnline) return;
+            
+            isSyncing = true;
+            const syncBtn = document.getElementById('sync-btn');
+            const syncIcon = document.getElementById('sync-icon');
+            const syncText = document.getElementById('sync-text');
+            
+            // Update button state
+            if (syncBtn) {
+                syncBtn.disabled = true;
+                syncIcon.innerHTML = '<div class="spinner"></div>';
+                syncText.textContent = 'Syncing...';
+            }
+            
+            try {
+                const querySnapshot = await db.collection('lyrics').orderBy('songTitle').get();
+                const newSongs = [];
+                querySnapshot.forEach(doc => {
+                    newSongs.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                // Save to local storage
+                await songDB.saveSongs(newSongs);
+                songs = newSongs;
+                
+                updateAvailableLetters();
+                currentLetter = '';
+                renderSongIndex('song-index-list');
+                renderSongIndex('viewer-song-index');
+                initAlphabetIndex('alphabet-index');
+                initAlphabetIndex('viewer-alphabet-index');
+                
+                // Activate the "All" button by default
+                document.querySelectorAll('.alphabet-index .alphabet-letter').forEach(el => {
+                    if (el.textContent === 'அனைத்தும்') {
+                        el.classList.add('active');
+                    } else {
+                        el.classList.remove('active');
+                    }
+                });
+                
+                console.log(`Synced ${newSongs.length} songs`);
+                
+                // Show success message
+                showSyncMessage('Sync complete!', false);
+                
+            } catch (error) {
+                console.error('Sync failed:', error);
+                showSyncMessage('Sync failed: ' + error.message, true);
+            } finally {
+                // Reset button state
+                if (syncBtn) {
+                    syncBtn.disabled = false;
+                    syncIcon.innerHTML = '<i class="fas fa-sync-alt"></i>';
+                    syncText.textContent = 'Sync';
+                }
+                isSyncing = false;
+            }
+        }
+
+        // Show sync message
+        function showSyncMessage(message, isError = false) {
+            const syncStatus = document.getElementById('sync-status');
+            const syncMessage = document.getElementById('sync-message');
+            const syncProgress = document.getElementById('sync-progress');
+            
+            syncStatus.classList.add('show');
+            syncMessage.textContent = message;
+            syncMessage.style.color = isError ? '#c62828' : 'white';
+            syncProgress.textContent = '';
+            
+            setTimeout(() => {
+                syncStatus.classList.remove('show');
+            }, isError ? 3000 : 2000);
+        }
+
+        // Sync songs when coming back online
+        async function syncWhenOnline() {
+            if (isOnline && isInitialized && !isSyncing) {
+                showSyncMessage('Syncing songs...', false);
+                
+                try {
+                    await loadSongs();
+                    showSyncMessage('Sync complete!', false);
+                } catch (error) {
+                    showSyncMessage('Sync failed: ' + error.message, true);
+                }
+            }
+        }
+
+        // Initialize service worker
+        async function initServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                try {
+                    const registration = await navigator.serviceWorker.register('/sw.js');
+                    console.log('Service Worker registered successfully:', registration);
+                } catch (error) {
+                    console.log('Service Worker registration failed:', error);
+                }
+            }
+        }
+
+        // Initialize IndexedDB
+        async function initDatabase() {
+            try {
+                await songDB.init();
+                console.log('IndexedDB initialized successfully');
+            } catch (error) {
+                console.error('IndexedDB initialization failed:', error);
+            }
+        }
+
+        // Bottom navigation functionality
+        function initBottomNavigation() {
+            const navItems = document.querySelectorAll('.nav-item');
+            const bottomNav = document.getElementById('bottom-nav');
+            
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const tab = item.getAttribute('data-tab');
+                    switchTab(tab);
+                });
+            });
+        }
+
+        // Switch between tabs
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update active nav item
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+            
+            // Hide all content
+            document.getElementById('admin-controls').classList.add('hidden');
+            document.getElementById('viewer-content').classList.add('hidden');
+            document.getElementById('lyric-detail-view').classList.add('hidden');
+            
+            // Show appropriate content
+            if (tab === 'admin' && currentUser && currentUser.email === 'simsonpeter@gmail.com') {
+                document.getElementById('admin-controls').classList.remove('hidden');
+                document.querySelector('.tab[data-tab="song-index"]').click();
+            } else if (tab === 'songs' || tab === 'search') {
+                document.getElementById('viewer-content').classList.remove('hidden');
+            } else if (tab === 'profile') {
+                // Show user profile info
+                showProfile();
+            }
+        }
+
+        // Show profile information
+        function showProfile() {
+            const viewerContent = document.getElementById('viewer-content');
+            viewerContent.innerHTML = `
+                <div class="lyric-form">
+                    <h2><i class="fas fa-user"></i> Profile</h2>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="text" value="${currentUser?.email || 'Not logged in'}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Last Sync</label>
+                        <input type="text" id="last-sync-time" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Local Songs</label>
+                        <input type="text" id="local-song-count" readonly>
+                    </div>
+                    <div class="lyric-actions">
+                        <button id="profile-sync-btn" class="sync-button">
+                            <i class="fas fa-sync-alt"></i>
+                            <span>Sync Now</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Load profile data
+            loadProfileData();
+            
+            // Add sync button event listener
+            document.getElementById('profile-sync-btn').addEventListener('click', manualSync);
+            
+            viewerContent.classList.remove('hidden');
+        }
+
+        // Load profile data
+        async function loadProfileData() {
+            try {
+                const lastSync = await songDB.getLastSyncTime();
+                const songCount = await songDB.getSongCount();
+                
+                document.getElementById('last-sync-time').value = lastSync ? 
+                    new Date(lastSync).toLocaleString() : 'Never';
+                document.getElementById('local-song-count').value = `${songCount} songs`;
+            } catch (error) {
+                console.error('Error loading profile data:', error);
+            }
+        }
+
+        // Pull-to-refresh functionality
+        function initPullToRefresh() {
+            const pullToRefreshEl = document.getElementById('pull-to-refresh');
+            const pullText = document.getElementById('pull-text');
+            let startY = 0;
+            let currentY = 0;
+            let isPulling = false;
+            const threshold = 80;
+
+            // Touch events
+            document.addEventListener('touchstart', (e) => {
+                if (window.scrollY === 0 && !isSyncing) {
+                    startY = e.touches[0].clientY;
+                    isPulling = true;
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchmove', (e) => {
+                if (!isPulling || isSyncing) return;
+                
+                currentY = e.touches[0].clientY;
+                const pullDistance = currentY - startY;
+                
+                if (pullDistance > 0 && window.scrollY === 0) {
+                    e.preventDefault();
+                    
+                    if (pullDistance > threshold) {
+                        pullToRefreshEl.classList.add('show');
+                        pullText.textContent = 'Release to refresh';
+                    } else {
+                        pullToRefreshEl.classList.remove('show');
+                        pullText.textContent = 'Pull to refresh';
+                    }
+                }
+            }, { passive: false });
+
+            document.addEventListener('touchend', (e) => {
+                if (!isPulling || isSyncing) return;
+                
+                const pullDistance = currentY - startY;
+                
+                if (pullDistance > threshold && window.scrollY === 0) {
+                    // Trigger sync
+                    pullText.textContent = 'Refreshing...';
+                    manualSync().then(() => {
+                        pullToRefreshEl.classList.remove('show');
+                        pullText.textContent = 'Pull to refresh';
+                    });
+                } else {
+                    pullToRefreshEl.classList.remove('show');
+                    pullText.textContent = 'Pull to refresh';
+                }
+                
+                isPulling = false;
+                startY = 0;
+                currentY = 0;
+            }, { passive: true });
+
+            // Mouse events for desktop
+            document.addEventListener('mousedown', (e) => {
+                if (window.scrollY === 0 && !isSyncing && e.clientY < 50) {
+                    startY = e.clientY;
+                    isPulling = true;
+                }
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isPulling || isSyncing) return;
+                
+                currentY = e.clientY;
+                const pullDistance = currentY - startY;
+                
+                if (pullDistance > 0 && window.scrollY === 0) {
+                    if (pullDistance > threshold) {
+                        pullToRefreshEl.classList.add('show');
+                        pullText.textContent = 'Release to refresh';
+                    } else {
+                        pullToRefreshEl.classList.remove('show');
+                        pullText.textContent = 'Pull to refresh';
+                    }
+                }
+            });
+
+            document.addEventListener('mouseup', (e) => {
+                if (!isPulling || isSyncing) return;
+                
+                const pullDistance = currentY - startY;
+                
+                if (pullDistance > threshold && window.scrollY === 0) {
+                    pullText.textContent = 'Refreshing...';
+                    manualSync().then(() => {
+                        pullToRefreshEl.classList.remove('show');
+                        pullText.textContent = 'Pull to refresh';
+                    });
+                } else {
+                    pullToRefreshEl.classList.remove('show');
+                    pullText.textContent = 'Pull to refresh';
+                }
+                
+                isPulling = false;
+                startY = 0;
+                currentY = 0;
+            });
+        }
+
         // Initialize
-        window.onload = () => {
+        window.onload = async () => {
+            // Initialize database and service worker
+            await initDatabase();
+            await initServiceWorker();
+            
+            // Initialize pull-to-refresh
+            initPullToRefresh();
+            
+            // Initialize bottom navigation
+            initBottomNavigation();
+            
+            // Set up sync button event listener
+            const syncBtn = document.getElementById('sync-btn');
+            if (syncBtn) {
+                syncBtn.addEventListener('click', manualSync);
+            }
+            
+            // Set up online/offline listeners
+            window.addEventListener('online', () => {
+                updateOnlineStatus();
+                syncWhenOnline();
+            });
+            
+            window.addEventListener('offline', () => {
+                updateOnlineStatus();
+            });
+            
+            // Initial status update
+            updateOnlineStatus();
+            
             if (auth.currentUser) {
                 authSection.classList.add('hidden');
                 userInfo.classList.remove('hidden');
                 userEmail.textContent = auth.currentUser.email;
                 appContent.classList.remove('hidden');
-                loadSongs();
+                document.getElementById('bottom-nav').classList.remove('hidden');
+                
+                // Show/hide admin nav item based on user
+                const adminNavItem = document.getElementById('admin-nav-item');
+                if (currentUser && currentUser.email === 'simsonpeter@gmail.com') {
+                    adminNavItem.style.display = 'flex';
+                } else {
+                    adminNavItem.style.display = 'none';
+                }
+                
+                isInitialized = true;
+                await loadSongs();
             }
         };
     </script>
