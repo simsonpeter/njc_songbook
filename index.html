@@ -935,6 +935,10 @@
             <i class="fas fa-search"></i>
             <span>Search</span>
         </a>
+        <a href="#" class="nav-item" data-tab="favorites">
+            <i class="fas fa-star"></i>
+            <span>Favorites</span>
+        </a>
         <a href="#" class="nav-item" data-tab="admin" id="admin-nav-item">
             <i class="fas fa-cog"></i>
             <span>Admin</span>
@@ -2255,6 +2259,8 @@
                 document.querySelector('.tab[data-tab="song-index"]').click();
             } else if (tab === 'songs' || tab === 'search') {
                 document.getElementById('viewer-content').classList.remove('hidden');
+            } else if (tab === 'favorites') {
+                showFavorites();
             } else if (tab === 'profile') {
                 // Show user profile info
                 showProfile();
@@ -2310,6 +2316,74 @@
             viewerContent.classList.remove('hidden');
         }
 
+        // Show favorites
+        function showFavorites() {
+            const viewerContent = document.getElementById('viewer-content');
+            
+            if (favorites.size === 0) {
+                viewerContent.innerHTML = `
+                    <div class="no-songs">
+                        <i class="fas fa-star" style="font-size: 3rem; color: #ccc; margin-bottom: 20px;"></i>
+                        <h2>No Favorites Yet</h2>
+                        <p>Tap the star button on any song to add it to your favorites!</p>
+                    </div>
+                `;
+            } else {
+                viewerContent.innerHTML = `
+                    <div class="search-bar">
+                        <h2><i class="fas fa-star"></i> Favorites (${favorites.size})</h2>
+                    </div>
+                    <div class="alphabet-index" id="favorites-alphabet-index"></div>
+                    <div id="favorites-song-index-container">
+                        <div class="song-index" id="favorites-song-index"></div>
+                    </div>
+                `;
+                
+                // Filter songs to only show favorites
+                const favoriteSongs = songs.filter(song => favorites.has(song.id));
+                
+                // Render favorite songs
+                renderFavoriteSongs(favoriteSongs);
+            }
+            
+            viewerContent.classList.remove('hidden');
+        }
+
+        // Render favorite songs
+        function renderFavoriteSongs(favoriteSongs) {
+            const container = document.getElementById('favorites-song-index');
+            const parentContainer = document.getElementById('favorites-song-index-container');
+            
+            if (!container) return;
+            
+            // Clear existing content
+            container.innerHTML = '';
+            
+            // Sort alphabetically
+            favoriteSongs.sort((a, b) => a.songTitle.localeCompare(b.songTitle, 'ta'));
+            
+            if (favoriteSongs.length === 0) {
+                parentContainer.innerHTML = '<div class="no-songs">No favorite songs found.</div>';
+                return;
+            }
+            
+            favoriteSongs.forEach(song => {
+                const songEl = document.createElement('div');
+                songEl.className = 'song-index-item';
+                
+                const songLink = document.createElement('a');
+                songLink.href = '#';
+                songLink.textContent = song.songTitle;
+                songLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    viewLyric(song.id);
+                });
+                
+                songEl.appendChild(songLink);
+                container.appendChild(songEl);
+            });
+        }
+
         // Load profile data
         async function loadProfileData() {
             try {
@@ -2342,6 +2416,10 @@
             const favoriteCountEl = document.getElementById('favorite-count');
             if (favoriteCountEl) {
                 favoriteCountEl.value = `${favorites.size} favorites`;
+            }
+            // Refresh favorites tab if it's currently visible
+            if (currentTab === 'favorites') {
+                showFavorites();
             }
         }
 
