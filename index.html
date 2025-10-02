@@ -10,7 +10,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
-    <script src="db.js"></script>
     <style>
         :root {
             --primary-color: #4a148c;
@@ -410,7 +409,7 @@
             display: block;
         }
 
-        .sync-button {
+        .refresh-button {
             background-color: var(--accent-color);
             color: white;
             border: none;
@@ -425,18 +424,18 @@
             gap: 4px;
         }
 
-        .sync-button:hover {
+        .refresh-button:hover {
             background-color: #c2185b;
             transform: scale(1.05);
         }
 
-        .sync-button:disabled {
+        .refresh-button:disabled {
             background-color: #ccc;
             cursor: not-allowed;
             transform: none;
         }
 
-        .sync-button .spinner {
+        .refresh-button .spinner {
             width: 12px;
             height: 12px;
             border: 2px solid transparent;
@@ -766,9 +765,9 @@
                     <div class="tab" data-tab="import-xml"><i class="fas fa-file-code"></i> XML</div>
                 </div>
                 <div class="lyric-actions">
-                    <button id="sync-btn" class="sync-button" title="Sync songs">
-                        <i id="sync-icon" class="fas fa-sync-alt"></i>
-                        <span id="sync-text">Sync</span>
+                    <button id="refresh-btn" class="refresh-button" title="Refresh songs">
+                        <i id="refresh-icon" class="fas fa-sync-alt"></i>
+                        <span id="refresh-text">Refresh</span>
                     </button>
                     <button id="delete-all-lyrics-btn" class="accent"><i class="fas fa-trash"></i> Delete All</button>
                 </div>
@@ -991,13 +990,34 @@
         let sqliteColumns = [];
         let isOnline = navigator.onLine;
         let isInitialized = false;
-        let isSyncing = false;
+        let isLoading = false;
         let currentTab = 'songs';
         let pullToRefresh = {
             startY: 0,
             currentY: 0,
             isPulling: false,
             threshold: 80
+        };
+
+        // Simple device info storage - only essential info for device identification
+        const deviceStorage = {
+            getDeviceId: () => {
+                let deviceId = localStorage.getItem('deviceId');
+                if (!deviceId) {
+                    deviceId = 'dev_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+                    localStorage.setItem('deviceId', deviceId);
+                }
+                return deviceId;
+            },
+            
+            getUserEmail: () => localStorage.getItem('userEmail'),
+            setUserEmail: (email) => localStorage.setItem('userEmail', email),
+            
+            clearAll: () => {
+                const deviceId = deviceStorage.getDeviceId(); // Preserve device ID
+                localStorage.clear();
+                localStorage.setItem('deviceId', deviceId);
+            }
         };
         
         // Initialize Tamil alphabet index based on available songs
@@ -1100,35 +1120,20 @@
             });
         }
         
-        // View lyric detail
+        // View lyric detail (online only)
         async function viewLyric(lyricId) {
+            if (!isOnline) {
+                alert('This app requires an internet connection to view lyrics. Please connect to the internet and try again.');
+                return;
+            }
+            
             try {
-                let lyric;
-                
-                if (isOnline) {
-                    try {
-                        // Try to get from Firebase first
-                        const doc = await db.collection('lyrics').doc(lyricId).get();
-                        if (doc.exists) {
-                            lyric = doc.data();
-                        } else {
-                            throw new Error('Document not found in Firebase');
-                        }
-                    } catch (error) {
-                        console.log('Firebase fetch failed, trying local storage:', error);
-                        // Fallback to local storage
-                        lyric = await songDB.getSongById(lyricId);
-                        if (!lyric) {
-                            throw new Error('Lyric not found in local storage');
-                        }
-                    }
-                } else {
-                    // Load from local storage when offline
-                    lyric = await songDB.getSongById(lyricId);
-                    if (!lyric) {
-                        throw new Error('Lyric not found in local storage');
-                    }
+                showSyncMessage('Loading lyric...', false);
+                const doc = await db.collection('lyrics').doc(lyricId).get();
+                if (!doc.exists) {
+                    throw new Error('Document not found online');
                 }
+                const lyric = doc.data();
                 
                 currentEditingLyricId = lyricId;
                 
@@ -1282,49 +1287,53 @@
             }
         }
         
-        // Load all songs from Firebase or local storage
+        // Load all songs from Firebase (online only)
         async function loadSongs() {
-            if (isOnline) {
-                try {
-                    // Try to load from Firebase first
-                    const querySnapshot = await db.collection('lyrics').orderBy('songTitle').get();
-                    songs = [];
-                    querySnapshot.forEach(doc => {
-                        songs.push({
-                            id: doc.id,
-                            ...doc.data()
-                        });
-                    });
-                    
-                    // Save to local storage
-                    await songDB.saveSongs(songs);
-                    console.log(`Synced ${songs.length} songs to local storage`);
-                } catch (error) {
-                    console.error('Error loading from Firebase, trying local storage:', error);
-                    // Fallback to local storage
-                    songs = await songDB.getAllSongs();
-                }
-            } else {
-                // Load from local storage when offline
-                songs = await songDB.getAllSongs();
-                console.log(`Loaded ${songs.length} songs from local storage (offline mode)`);
+            if (!isOnline) {
+                alert('This app requires an internet connection. Please connect to the internet and try again.');
+                return;
             }
             
-            updateAvailableLetters();
-            currentLetter = '';
-            renderSongIndex('song-index-list');
-            renderSongIndex('viewer-song-index');
-            initAlphabetIndex('alphabet-index');
-            initAlphabetIndex('viewer-alphabet-index');
+            if (isLoading) return; // Prevent multiple simultaneous loads
+            isLoading = true;
             
-            // Activate the "All" button by default
-            document.querySelectorAll('.alphabet-index .alphabet-letter').forEach(el => {
-                if (el.textContent === 'அனைத்தும்') {
-                    el.classList.add('active');
-                } else {
-                    el.classList.remove('active');
-                }
-            });
+            try {
+                showSyncMessage('Loading songs from online...', false);
+                const querySnapshot = await db.collection('lyrics').orderBy('songTitle').get();
+                songs = [];
+                querySnapshot.forEach(doc => {
+                    songs.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                console.log(`Loaded ${songs.length} songs from Firebase`);
+                
+                updateAvailableLetters();
+                currentLetter = '';
+                renderSongIndex('song-index-list');
+                renderSongIndex('viewer-song-index');
+                initAlphabetIndex('alphabet-index');
+                initAlphabetIndex('viewer-alphabet-index');
+                
+                // Activate the "All" button by default
+                document.querySelectorAll('.alphabet-index .alphabet-letter').forEach(el => {
+                    if (el.textContent === 'அனைத்தும்') {
+                        el.classList.add('active');
+                    } else {
+                        el.classList.remove('active');
+                    }
+                });
+                
+                showSyncMessage('Songs loaded successfully!', false);
+            } catch (error) {
+                console.error('Error loading from Firebase:', error);
+                alert('Error loading songs from online: ' + error.message);
+                showSyncMessage('Error loading songs', true);
+            } finally {
+                isLoading = false;
+            }
         }
         
         // Tab switching
@@ -2064,69 +2073,11 @@
             }
         }
 
-        // Manual sync function
-        async function manualSync() {
-            if (isSyncing || !isOnline) return;
+        // Refresh songs function
+        async function refreshSongs() {
+            if (isLoading || !isOnline) return;
             
-            isSyncing = true;
-            const syncBtn = document.getElementById('sync-btn');
-            const syncIcon = document.getElementById('sync-icon');
-            const syncText = document.getElementById('sync-text');
-            
-            // Update button state
-            if (syncBtn) {
-                syncBtn.disabled = true;
-                syncIcon.innerHTML = '<div class="spinner"></div>';
-                syncText.textContent = 'Syncing...';
-            }
-            
-            try {
-                const querySnapshot = await db.collection('lyrics').orderBy('songTitle').get();
-                const newSongs = [];
-                querySnapshot.forEach(doc => {
-                    newSongs.push({
-                        id: doc.id,
-                        ...doc.data()
-                    });
-                });
-                
-                // Save to local storage
-                await songDB.saveSongs(newSongs);
-                songs = newSongs;
-                
-                updateAvailableLetters();
-                currentLetter = '';
-                renderSongIndex('song-index-list');
-                renderSongIndex('viewer-song-index');
-                initAlphabetIndex('alphabet-index');
-                initAlphabetIndex('viewer-alphabet-index');
-                
-                // Activate the "All" button by default
-                document.querySelectorAll('.alphabet-index .alphabet-letter').forEach(el => {
-                    if (el.textContent === 'அனைத்தும்') {
-                        el.classList.add('active');
-                    } else {
-                        el.classList.remove('active');
-                    }
-                });
-                
-                console.log(`Synced ${newSongs.length} songs`);
-                
-                // Show success message
-                showSyncMessage('Sync complete!', false);
-                
-            } catch (error) {
-                console.error('Sync failed:', error);
-                showSyncMessage('Sync failed: ' + error.message, true);
-            } finally {
-                // Reset button state
-                if (syncBtn) {
-                    syncBtn.disabled = false;
-                    syncIcon.innerHTML = '<i class="fas fa-sync-alt"></i>';
-                    syncText.textContent = 'Sync';
-                }
-                isSyncing = false;
-            }
+            await loadSongs();
         }
 
         // Show sync message
@@ -2145,40 +2096,29 @@
             }, isError ? 3000 : 2000);
         }
 
-        // Sync songs when coming back online
-        async function syncWhenOnline() {
-            if (isOnline && isInitialized && !isSyncing) {
-                showSyncMessage('Syncing songs...', false);
+        // Load songs when coming back online
+        async function loadWhenOnline() {
+            if (isOnline && isInitialized && !isLoading) {
+                showSyncMessage('Connecting online...', false);
                 
                 try {
                     await loadSongs();
-                    showSyncMessage('Sync complete!', false);
                 } catch (error) {
-                    showSyncMessage('Sync failed: ' + error.message, true);
+                    showSyncMessage('Failed to load songs: ' + error.message, true);
                 }
             }
         }
 
-        // Initialize service worker
+        // Skip service worker initialization - no caching needed
         async function initServiceWorker() {
-            if ('serviceWorker' in navigator) {
-                try {
-                    const registration = await navigator.serviceWorker.register('/sw.js');
-                    console.log('Service Worker registered successfully:', registration);
-                } catch (error) {
-                    console.log('Service Worker registration failed:', error);
-                }
-            }
+            // Service worker disabled - everything must be online
+            console.log('Service worker disabled - online-only mode');
         }
 
-        // Initialize IndexedDB
+        // Skip IndexedDB initialization - no local storage needed
         async function initDatabase() {
-            try {
-                await songDB.init();
-                console.log('IndexedDB initialized successfully');
-            } catch (error) {
-                console.error('IndexedDB initialization failed:', error);
-            }
+            // IndexedDB disabled - everything must be online
+            console.log('IndexedDB disabled - online-only mode');
         }
 
         // Bottom navigation functionality
@@ -2233,17 +2173,17 @@
                         <input type="text" value="${currentUser?.email || 'Not logged in'}" readonly>
                     </div>
                     <div class="form-group">
-                        <label>Last Sync</label>
-                        <input type="text" id="last-sync-time" readonly>
+                        <label>Online Status</label>
+                        <input type="text" value="${isOnline ? 'Connected to Internet' : 'No Internet Connection'}" readonly>
                     </div>
                     <div class="form-group">
-                        <label>Local Songs</label>
-                        <input type="text" id="local-song-count" readonly>
+                        <label>Device ID</label>
+                        <input type="text" id="device-id" readonly>
                     </div>
                     <div class="lyric-actions">
-                        <button id="profile-sync-btn" class="sync-button">
+                        <button id="profile-refresh-btn" class="refresh-button">
                             <i class="fas fa-sync-alt"></i>
-                            <span>Sync Now</span>
+                            <span>Refresh Now</span>
                         </button>
                         <button id="profile-logout-btn" class="accent">
                             <i class="fas fa-sign-out-alt"></i>
@@ -2257,7 +2197,7 @@
             loadProfileData();
             
             // Add event listeners
-            document.getElementById('profile-sync-btn').addEventListener('click', manualSync);
+            document.getElementById('profile-refresh-btn').addEventListener('click', refreshSongs);
             document.getElementById('profile-logout-btn').addEventListener('click', () => {
                 auth.signOut().catch(error => {
                     alert('Logout error: ' + error.message);
@@ -2270,12 +2210,7 @@
         // Load profile data
         async function loadProfileData() {
             try {
-                const lastSync = await songDB.getLastSyncTime();
-                const songCount = await songDB.getSongCount();
-                
-                document.getElementById('last-sync-time').value = lastSync ? 
-                    new Date(lastSync).toLocaleString() : 'Never';
-                document.getElementById('local-song-count').value = `${songCount} songs`;
+                document.getElementById('device-id').value = deviceStorage.getDeviceId();
             } catch (error) {
                 console.error('Error loading profile data:', error);
             }
@@ -2292,14 +2227,14 @@
 
             // Touch events
             document.addEventListener('touchstart', (e) => {
-                if (window.scrollY === 0 && !isSyncing) {
+                if (window.scrollY === 0 && !isLoading) {
                     startY = e.touches[0].clientY;
                     isPulling = true;
                 }
             }, { passive: true });
 
             document.addEventListener('touchmove', (e) => {
-                if (!isPulling || isSyncing) return;
+                if (!isPulling || isLoading) return;
                 
                 currentY = e.touches[0].clientY;
                 const pullDistance = currentY - startY;
@@ -2318,14 +2253,14 @@
             }, { passive: false });
 
             document.addEventListener('touchend', (e) => {
-                if (!isPulling || isSyncing) return;
+                if (!isPulling || isLoading) return;
                 
                 const pullDistance = currentY - startY;
                 
                 if (pullDistance > threshold && window.scrollY === 0) {
-                    // Trigger sync
+                    // Trigger refresh
                     pullText.textContent = 'Refreshing...';
-                    manualSync().then(() => {
+                    refreshSongs().then(() => {
                         pullToRefreshEl.classList.remove('show');
                         pullText.textContent = 'Pull to refresh';
                     });
@@ -2341,14 +2276,14 @@
 
             // Mouse events for desktop
             document.addEventListener('mousedown', (e) => {
-                if (window.scrollY === 0 && !isSyncing && e.clientY < 50) {
+                if (window.scrollY === 0 && !isLoading && e.clientY < 50) {
                     startY = e.clientY;
                     isPulling = true;
                 }
             });
 
             document.addEventListener('mousemove', (e) => {
-                if (!isPulling || isSyncing) return;
+                if (!isPulling || isLoading) return;
                 
                 currentY = e.clientY;
                 const pullDistance = currentY - startY;
@@ -2365,13 +2300,13 @@
             });
 
             document.addEventListener('mouseup', (e) => {
-                if (!isPulling || isSyncing) return;
+                if (!isPulling || isLoading) return;
                 
                 const pullDistance = currentY - startY;
                 
                 if (pullDistance > threshold && window.scrollY === 0) {
                     pullText.textContent = 'Refreshing...';
-                    manualSync().then(() => {
+                    refreshSongs().then(() => {
                         pullToRefreshEl.classList.remove('show');
                         pullText.textContent = 'Pull to refresh';
                     });
@@ -2398,16 +2333,16 @@
             // Initialize bottom navigation
             initBottomNavigation();
             
-            // Set up sync button event listener
-            const syncBtn = document.getElementById('sync-btn');
-            if (syncBtn) {
-                syncBtn.addEventListener('click', manualSync);
+            // Set up refresh button event listener
+            const refreshBtn = document.getElementById('refresh-btn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', refreshSongs);
             }
             
             // Set up online/offline listeners
             window.addEventListener('online', () => {
                 updateOnlineStatus();
-                syncWhenOnline();
+                loadWhenOnline();
             });
             
             window.addEventListener('offline', () => {
