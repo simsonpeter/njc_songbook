@@ -936,6 +936,48 @@
             measurementId: "G-EKMD30J3GS"
         };
         
+        // Favorites helpers
+        async function loadFavorites() {
+            try {
+                if (!currentUser) {
+                    favoritesSet.clear();
+                    return;
+                }
+                const snapshot = await db.collection('users').doc(currentUser.uid).collection('favorites').get();
+                const ids = snapshot.docs.map(d => d.id);
+                favoritesSet = new Set(ids);
+            } catch (error) {
+                console.error('Failed to load favorites:', error);
+            }
+        }
+
+        async function toggleFavorite(lyricId, buttonEl, isDetail = false) {
+            try {
+                if (!currentUser) {
+                    alert('Please log in to use favorites');
+                    return;
+                }
+                const ref = db.collection('users').doc(currentUser.uid).collection('favorites').doc(lyricId);
+                if (favoritesSet.has(lyricId)) {
+                    await ref.delete();
+                    favoritesSet.delete(lyricId);
+                } else {
+                    await ref.set({ addedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    favoritesSet.add(lyricId);
+                }
+                if (buttonEl) {
+                    const isFav = favoritesSet.has(lyricId);
+                    if (isDetail) {
+                        buttonEl.style.color = isFav ? '#e91e63' : '#666';
+                        buttonEl.innerHTML = `<i class="${isFav ? 'fas' : 'far'} fa-heart"></i><span style=\"margin-left:6px\">${isFav ? 'Unfavorite' : 'Favorite'}</span>`;
+                    } else {
+                        buttonEl.innerHTML = isFav ? '<i class="fas fa-heart" style="color:#e91e63"></i>' : '<i class="far fa-heart"></i>';
+                    }
+                }
+            } catch (error) {
+                alert('Failed to update favorite: ' + error.message);
+            }
+        }
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
@@ -999,6 +1041,7 @@
             isPulling: false,
             threshold: 80
         };
+        let favoritesSet = new Set();
         
         // Initialize Tamil alphabet index based on available songs
         function initAlphabetIndex(containerId) {
@@ -1094,8 +1137,24 @@
                     e.preventDefault();
                     viewLyric(song.id);
                 });
+
+                const favBtn = document.createElement('button');
+                favBtn.className = 'favorite-btn';
+                favBtn.style.marginLeft = '8px';
+                favBtn.style.background = 'transparent';
+                favBtn.style.border = 'none';
+                favBtn.style.cursor = 'pointer';
+                favBtn.title = 'Favorite';
+                const isFav = favoritesSet.has(song.id);
+                favBtn.innerHTML = isFav ? '<i class="fas fa-heart" style="color:#e91e63"></i>' : '<i class="far fa-heart"></i>';
+                favBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleFavorite(song.id, favBtn);
+                });
                 
                 songEl.appendChild(songLink);
+                songEl.appendChild(favBtn);
                 targetContainer.appendChild(songEl);
             });
         }
@@ -1152,6 +1211,12 @@
                         <span>${lyric.language}</span>
                         <span>${createdDate}</span>
                     </div>
+                    <div class="lyric-actions">
+                        <button id="favorite-detail-btn" class="accent" style="background-color: transparent; color: ${favoritesSet.has(lyricId) ? '#e91e63' : '#666'}; border: 2px solid #eee;">
+                            <i class="${favoritesSet.has(lyricId) ? 'fas' : 'far'} fa-heart"></i>
+                            <span style="margin-left:6px">${favoritesSet.has(lyricId) ? 'Unfavorite' : 'Favorite'}</span>
+                        </button>
+                    </div>
                     
                     <div class="meta-item">
                         ${lyric.movieName ? `<p><strong>Movie:</strong> ${lyric.movieName}</p>` : ''}
@@ -1163,6 +1228,14 @@
                     <div class="lyric-text">${lyric.lyricsText}</div>
                     ${adminControlsHTML}
                 `;
+                
+                const favDetailBtn = document.getElementById('favorite-detail-btn');
+                if (favDetailBtn) {
+                    favDetailBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        toggleFavorite(lyricId, favDetailBtn, true);
+                    });
+                }
                 
                 viewerContent.classList.add('hidden');
                 adminControls.classList.add('hidden');
@@ -1418,11 +1491,11 @@
                     adminControls.classList.remove('hidden');
                     viewerContent.classList.add('hidden');
                     setupTabs();
-                    loadSongs();
+                    loadFavorites().then(() => loadSongs());
                 } else {
                     adminControls.classList.add('hidden');
                     viewerContent.classList.remove('hidden');
-                    loadSongs();
+                    loadFavorites().then(() => loadSongs());
                 }
             } else {
                 // User is signed out
@@ -1430,6 +1503,7 @@
                 resetPasswordSection.classList.add('hidden');
                 appContent.classList.add('hidden');
                 document.getElementById('bottom-nav').classList.add('hidden');
+                favoritesSet = new Set();
             }
         });
         
@@ -2034,8 +2108,24 @@
                     e.preventDefault();
                     viewLyric(song.id);
                 });
+
+                const favBtn = document.createElement('button');
+                favBtn.className = 'favorite-btn';
+                favBtn.style.marginLeft = '8px';
+                favBtn.style.background = 'transparent';
+                favBtn.style.border = 'none';
+                favBtn.style.cursor = 'pointer';
+                favBtn.title = 'Favorite';
+                const isFav = favoritesSet.has(song.id);
+                favBtn.innerHTML = isFav ? '<i class="fas fa-heart" style="color:#e91e63"></i>' : '<i class="far fa-heart"></i>';
+                favBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleFavorite(song.id, favBtn);
+                });
                 
                 songEl.appendChild(songLink);
+                songEl.appendChild(favBtn);
                 targetContainer.appendChild(songEl);
             });
         }
@@ -2165,6 +2255,29 @@
                 try {
                     const registration = await navigator.serviceWorker.register('/sw.js');
                     console.log('Service Worker registered successfully:', registration);
+
+                    // Reload page when controller changes to pick latest deploy
+                    let refreshing = false;
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        if (refreshing) return;
+                        refreshing = true;
+                        window.location.reload();
+                    });
+
+                    // If there's a waiting worker, activate it immediately
+                    if (registration.waiting) {
+                        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    }
+
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        if (!newWorker) return;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                        });
+                    });
                 } catch (error) {
                     console.log('Service Worker registration failed:', error);
                 }
@@ -2431,6 +2544,7 @@
                 }
                 
                 isInitialized = true;
+                await loadFavorites();
                 await loadSongs();
             }
         };
