@@ -606,6 +606,37 @@
             gap: 5px;
             margin-bottom: 15px;
         }
+
+        .song-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .song-title-section {
+            flex: 1;
+        }
+
+        .favorite-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #ccc;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .favorite-btn:hover {
+            color: #ffc107;
+            transform: scale(1.1);
+        }
+
+        .favorite-btn.active {
+            color: #ffc107;
+        }
         
         .no-songs {
             text-align: center;
@@ -993,6 +1024,7 @@
         let isInitialized = false;
         let isSyncing = false;
         let currentTab = 'songs';
+        let favorites = new Set(); // Store favorite song IDs
         let pullToRefresh = {
             startY: 0,
             currentY: 0,
@@ -1147,10 +1179,17 @@
                     (lyric.createdAt ? new Date(lyric.createdAt).toLocaleDateString() : 'Unknown');
                 
                 lyricDetailContent.innerHTML = `
-                    <h2>${lyric.songTitle}</h2>
-                    <div class="lyric-meta">
-                        <span>${lyric.language}</span>
-                        <span>${createdDate}</span>
+                    <div class="song-header">
+                        <div class="song-title-section">
+                            <h2>${lyric.songTitle}</h2>
+                            <div class="lyric-meta">
+                                <span>${lyric.language}</span>
+                                <span>${createdDate}</span>
+                            </div>
+                        </div>
+                        <button id="favorite-btn-${lyricId}" class="favorite-btn ${isFavorite(lyricId) ? 'active' : ''}" onclick="toggleFavorite('${lyricId}')">
+                            <i class="${isFavorite(lyricId) ? 'fas' : 'far'} fa-star"></i>
+                        </button>
                     </div>
                     
                     <div class="meta-item">
@@ -2240,6 +2279,10 @@
                         <label>Local Songs</label>
                         <input type="text" id="local-song-count" readonly>
                     </div>
+                    <div class="form-group">
+                        <label>Favorites</label>
+                        <input type="text" id="favorite-count" readonly>
+                    </div>
                     <div class="lyric-actions">
                         <button id="profile-sync-btn" class="sync-button">
                             <i class="fas fa-sync-alt"></i>
@@ -2276,9 +2319,50 @@
                 document.getElementById('last-sync-time').value = lastSync ? 
                     new Date(lastSync).toLocaleString() : 'Never';
                 document.getElementById('local-song-count').value = `${songCount} songs`;
+                document.getElementById('favorite-count').value = `${favorites.size} favorites`;
             } catch (error) {
                 console.error('Error loading profile data:', error);
             }
+        }
+
+        // Favorite management functions
+        function toggleFavorite(songId) {
+            const btn = document.getElementById(`favorite-btn-${songId}`);
+            if (favorites.has(songId)) {
+                favorites.delete(songId);
+                btn.classList.remove('active');
+                btn.innerHTML = '<i class="far fa-star"></i>';
+            } else {
+                favorites.add(songId);
+                btn.classList.add('active');
+                btn.innerHTML = '<i class="fas fa-star"></i>';
+            }
+            saveFavorites();
+            // Update favorite count in profile if visible
+            const favoriteCountEl = document.getElementById('favorite-count');
+            if (favoriteCountEl) {
+                favoriteCountEl.value = `${favorites.size} favorites`;
+            }
+        }
+
+        function saveFavorites() {
+            localStorage.setItem('songbook-favorites', JSON.stringify([...favorites]));
+        }
+
+        function loadFavorites() {
+            try {
+                const saved = localStorage.getItem('songbook-favorites');
+                if (saved) {
+                    favorites = new Set(JSON.parse(saved));
+                }
+            } catch (error) {
+                console.error('Error loading favorites:', error);
+                favorites = new Set();
+            }
+        }
+
+        function isFavorite(songId) {
+            return favorites.has(songId);
         }
 
         // Pull-to-refresh functionality
@@ -2391,6 +2475,9 @@
             // Initialize database and service worker
             await initDatabase();
             await initServiceWorker();
+            
+            // Initialize favorites
+            loadFavorites();
             
             // Initialize pull-to-refresh
             initPullToRefresh();
