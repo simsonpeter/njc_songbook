@@ -891,6 +891,7 @@
                 <button id="back-to-index" class="accent back-button"><i class="fas fa-arrow-left"></i> Back to Index</button>
                 <div class="lyric-detail-container" id="lyric-detail-content"></div>
             </div>
+            <div id="profile-content" class="hidden"></div>
         </div>
     </div>
 
@@ -903,6 +904,10 @@
         <a href="#" class="nav-item" data-tab="search">
             <i class="fas fa-search"></i>
             <span>Search</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="favorites">
+            <i class="fas fa-star"></i>
+            <span>Favorites</span>
         </a>
         <a href="#" class="nav-item" data-tab="admin" id="admin-nav-item">
             <i class="fas fa-cog"></i>
@@ -993,6 +998,7 @@
         let isInitialized = false;
         let isSyncing = false;
         let currentTab = 'songs';
+        let favoriteIds = new Set();
         let pullToRefresh = {
             startY: 0,
             currentY: 0,
@@ -1086,7 +1092,7 @@
             filteredSongs.forEach(song => {
                 const songEl = document.createElement('div');
                 songEl.className = 'song-index-item';
-                
+
                 const songLink = document.createElement('a');
                 songLink.href = '#';
                 songLink.textContent = song.songTitle;
@@ -1094,8 +1100,20 @@
                     e.preventDefault();
                     viewLyric(song.id);
                 });
-                
+
+                const favBtn = document.createElement('button');
+                favBtn.className = 'accent';
+                favBtn.style.marginLeft = '8px';
+                favBtn.title = favoriteIds.has(song.id) ? 'Remove Favorite' : 'Add Favorite';
+                favBtn.innerHTML = favoriteIds.has(song.id) ? '<i class="fas fa-star"></i>' : '<i class="far fa-star"></i>';
+                favBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    await toggleFavorite(song.id, favBtn);
+                });
+
                 songEl.appendChild(songLink);
+                songEl.appendChild(favBtn);
                 targetContainer.appendChild(songEl);
             });
         }
@@ -1310,6 +1328,12 @@
                 console.log(`Loaded ${songs.length} songs from local storage (offline mode)`);
             }
             
+            try {
+                const ids = await songDB.getAllFavoriteIds();
+                favoriteIds = new Set(ids);
+            } catch (e) {
+                console.error('Failed to load favorites:', e);
+            }
             updateAvailableLetters();
             currentLetter = '';
             renderSongIndex('song-index-list');
@@ -2026,7 +2050,7 @@
             filteredSongs.forEach(song => {
                 const songEl = document.createElement('div');
                 songEl.className = 'song-index-item';
-                
+
                 const songLink = document.createElement('a');
                 songLink.href = '#';
                 songLink.textContent = song.songTitle;
@@ -2034,8 +2058,20 @@
                     e.preventDefault();
                     viewLyric(song.id);
                 });
-                
+
+                const favBtn = document.createElement('button');
+                favBtn.className = 'accent';
+                favBtn.style.marginLeft = '8px';
+                favBtn.title = favoriteIds.has(song.id) ? 'Remove Favorite' : 'Add Favorite';
+                favBtn.innerHTML = favoriteIds.has(song.id) ? '<i class="fas fa-star"></i>' : '<i class="far fa-star"></i>';
+                favBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    await toggleFavorite(song.id, favBtn);
+                });
+
                 songEl.appendChild(songLink);
+                songEl.appendChild(favBtn);
                 targetContainer.appendChild(songEl);
             });
         }
@@ -2171,6 +2207,29 @@
             }
         }
 
+        async function clearAllCaches() {
+            try {
+                // Unregister all service workers
+                if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(regs.map(r => r.unregister()));
+                }
+                // Delete all caches
+                if (window.caches) {
+                    const names = await caches.keys();
+                    await Promise.all(names.map(n => caches.delete(n)));
+                }
+                // Clear IndexedDB data
+                await songDB.clearAllData();
+                try { indexedDB.deleteDatabase('NJC_SongBook'); } catch (e) {}
+                showSyncMessage('Cache cleared. Reloading...', false);
+                setTimeout(() => window.location.reload(), 800);
+            } catch (e) {
+                showSyncMessage('Failed to clear cache: ' + e.message, true);
+                throw e;
+            }
+        }
+
         // Initialize IndexedDB
         async function initDatabase() {
             try {
@@ -2209,6 +2268,8 @@
             document.getElementById('admin-controls').classList.add('hidden');
             document.getElementById('viewer-content').classList.add('hidden');
             document.getElementById('lyric-detail-view').classList.add('hidden');
+            const profileContent = document.getElementById('profile-content');
+            if (profileContent) profileContent.classList.add('hidden');
             
             // Show appropriate content
             if (tab === 'admin' && currentUser && currentUser.email === 'simsonpeter@gmail.com') {
@@ -2216,6 +2277,13 @@
                 document.querySelector('.tab[data-tab="song-index"]').click();
             } else if (tab === 'songs' || tab === 'search') {
                 document.getElementById('viewer-content').classList.remove('hidden');
+                if (tab === 'songs') {
+                    renderSongIndex('viewer-song-index');
+                }
+            } else if (tab === 'favorites') {
+                document.getElementById('viewer-content').classList.remove('hidden');
+                const favSongs = songs.filter(s => favoriteIds.has(s.id));
+                renderFilteredSongs(favSongs, 'viewer-song-index');
             } else if (tab === 'profile') {
                 // Show user profile info
                 showProfile();
@@ -2224,8 +2292,9 @@
 
         // Show profile information
         function showProfile() {
-            const viewerContent = document.getElementById('viewer-content');
-            viewerContent.innerHTML = `
+            const profileContent = document.getElementById('profile-content');
+            if (!profileContent) return;
+            profileContent.innerHTML = `
                 <div class="lyric-form">
                     <h2><i class="fas fa-user"></i> Profile</h2>
                     <div class="form-group">
@@ -2249,6 +2318,10 @@
                             <i class="fas fa-sign-out-alt"></i>
                             <span>Sign Out</span>
                         </button>
+                        <button id="clear-cache-btn" class="accent">
+                            <i class="fas fa-broom"></i>
+                            <span>Clear Cache</span>
+                        </button>
                     </div>
                 </div>
             `;
@@ -2263,8 +2336,14 @@
                     alert('Logout error: ' + error.message);
                 });
             });
-            
-            viewerContent.classList.remove('hidden');
+            const clearBtn = document.getElementById('clear-cache-btn');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    clearAllCaches().catch(error => alert('Clear cache failed: ' + error.message));
+                });
+            }
+
+            profileContent.classList.remove('hidden');
         }
 
         // Load profile data
