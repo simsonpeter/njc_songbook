@@ -1,12 +1,15 @@
 // Service Worker for NJC Song Book
-const CACHE_NAME = 'njc-songbook-v3';
+const CACHE_NAME = 'njc-songbook-v4';
 const urlsToCache = [
   '/',
   '/index.html',
+  '/db.js',
+  '/sw.js',
   'https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js',
   'https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js',
   'https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js'
+  'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.wasm'
 ];
 
 // Install event - cache resources
@@ -20,13 +23,14 @@ self.addEventListener('install', event => {
 
 // Fetch event - serve from cache when offline
 self.addEventListener('fetch', event => {
+  const { request } = event;
+  if (request.method !== 'GET') {
+    return; // Only handle GET requests
+  }
+
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      }
-    )
+    caches.match(request)
+      .then(response => response || fetch(request))
   );
 });
 
