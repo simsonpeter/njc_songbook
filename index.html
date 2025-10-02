@@ -380,29 +380,16 @@
             margin-top: 10px;
         }
 
-        .alphabet-toggle-btn {
-            background: var(--secondary-color);
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-left: 10px;
-            transition: all 0.3s ease;
+        .alphabet-toggle {
+            background-color: var(--secondary-color) !important;
+            color: white !important;
+            border: none !important;
         }
 
-        .alphabet-toggle-btn:hover {
-            background: var(--primary-color);
-            transform: translateY(-1px);
+        .alphabet-toggle:hover {
+            background-color: var(--primary-color) !important;
         }
 
-        .alphabet-toggle-btn i {
-            transition: transform 0.3s ease;
-        }
         
         .alphabet-letter {
             padding: 8px 15px;
@@ -1211,10 +1198,10 @@
             
             container.appendChild(alphabetContainer);
             
-            // Create "More Alphabet" button
+            // Create "எழுத்துக்கள்" button
             const moreBtn = document.createElement('div');
-            moreBtn.className = 'alphabet-toggle-btn';
-            moreBtn.innerHTML = '<i class="fas fa-chevron-down"></i> More Alphabet';
+            moreBtn.className = 'alphabet-letter alphabet-toggle';
+            moreBtn.innerHTML = '<i class="fas fa-chevron-down"></i> எழுத்துக்கள்';
             moreBtn.addEventListener('click', () => toggleAlphabetExpanded(alphabetContainer, moreBtn));
             container.appendChild(moreBtn);
         }
@@ -1223,10 +1210,10 @@
             const isHidden = alphabetContainer.classList.contains('hidden');
             if (isHidden) {
                 alphabetContainer.classList.remove('hidden');
-                toggleBtn.innerHTML = '<i class="fas fa-chevron-up"></i> Hide Alphabet';
+                toggleBtn.innerHTML = '<i class="fas fa-chevron-up"></i> எழுத்துக்கள்';
             } else {
                 alphabetContainer.classList.add('hidden');
-                toggleBtn.innerHTML = '<i class="fas fa-chevron-down"></i> More Alphabet';
+                toggleBtn.innerHTML = '<i class="fas fa-chevron-down"></i> எழுத்துக்கள்';
             }
         }
         
