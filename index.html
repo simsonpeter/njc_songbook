@@ -887,6 +887,8 @@
                 </div>
             </div>
             
+            <div id="profile-content" class="hidden"></div>
+            
             <div id="lyric-detail-view" class="hidden">
                 <button id="back-to-index" class="accent back-button"><i class="fas fa-arrow-left"></i> Back to Index</button>
                 <div class="lyric-detail-container" id="lyric-detail-content"></div>
@@ -949,6 +951,7 @@
         const appContent = document.getElementById('app-content');
         const adminControls = document.getElementById('admin-controls');
         const viewerContent = document.getElementById('viewer-content');
+        const profileContent = document.getElementById('profile-content');
         const saveLyricBtn = document.getElementById('save-lyric');
         const backToIndexBtn = document.getElementById('back-to-index');
         const lyricDetailView = document.getElementById('lyric-detail-view');
@@ -2208,6 +2211,7 @@
             // Hide all content
             document.getElementById('admin-controls').classList.add('hidden');
             document.getElementById('viewer-content').classList.add('hidden');
+            document.getElementById('profile-content').classList.add('hidden');
             document.getElementById('lyric-detail-view').classList.add('hidden');
             
             // Show appropriate content
@@ -2224,8 +2228,8 @@
 
         // Show profile information
         function showProfile() {
-            const viewerContent = document.getElementById('viewer-content');
-            viewerContent.innerHTML = `
+            if (!profileContent) return;
+            profileContent.innerHTML = `
                 <div class="lyric-form">
                     <h2><i class="fas fa-user"></i> Profile</h2>
                     <div class="form-group">
@@ -2264,7 +2268,7 @@
                 });
             });
             
-            viewerContent.classList.remove('hidden');
+            profileContent.classList.remove('hidden');
         }
 
         // Load profile data
