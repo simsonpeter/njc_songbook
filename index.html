@@ -79,6 +79,30 @@
             margin: 20px 0;
             gap: 10px;
             flex-wrap: wrap;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .auth-notice {
+            background: linear-gradient(135deg, #e8f5e8, #f0f8ff);
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            max-width: 500px;
+        }
+
+        .auth-notice h3 {
+            margin: 0 0 10px 0;
+            color: var(--primary-color);
+            font-size: 1.2rem;
+        }
+
+        .auth-notice p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
         }
         
         .auth-section input {
@@ -768,11 +792,16 @@
     
     <div class="container">
         <div id="auth-section" class="auth-section">
+            <div class="auth-notice">
+                <h3><i class="fas fa-lock-open"></i> Login Optional</h3>
+                <p>You can use the app offline without signing in. Login is only needed for admin features.</p>
+            </div>
             <input type="email" id="email" placeholder="Email">
             <input type="password" id="password" placeholder="Password">
             <button id="login-btn">Login</button>
             <button id="signup-btn">Sign Up</button>
             <span id="reset-password-link" class="reset-password-link">Forgot Password?</span>
+            <button id="continue-as-guest" class="accent" onclick="hideLoginForm()">Continue as Guest</button>
         </div>
         
         <div id="reset-password-section" class="hidden">
@@ -1441,36 +1470,24 @@
         // Authentication state observer
         auth.onAuthStateChanged(user => {
             currentUser = user;
-            if (user) {
-                // User is signed in
-                authSection.classList.add('hidden');
-                resetPasswordSection.classList.add('hidden');
-                appContent.classList.remove('hidden');
-                document.getElementById('bottom-nav').classList.remove('hidden');
-                
-                // Show/hide admin nav item based on user
-                const adminNavItem = document.getElementById('admin-nav-item');
-                if (user.email === 'simsonpeter@gmail.com') {
-                    adminNavItem.style.display = 'flex';
-                } else {
-                    adminNavItem.style.display = 'none';
-                }
-                
-                // Setup tabs for admin users
-                if (user.email === 'simsonpeter@gmail.com') {
-                    setupTabs();
-                }
-                
-                // Load songs and set default tab
-                loadSongs();
-                switchTab('songs'); // Always start on songs tab regardless of user type
+            // Always show the app - no login required for basic usage
+            authSection.classList.add('hidden');
+            resetPasswordSection.classList.add('hidden');
+            appContent.classList.remove('hidden');
+            document.getElementById('bottom-nav').classList.remove('hidden');
+            
+            // Show/hide admin nav item based on user (only show for admin)
+            const adminNavItem = document.getElementById('admin-nav-item');
+            if (user && user.email === 'simsonpeter@gmail.com') {
+                adminNavItem.style.display = 'flex';
+                setupTabs();
             } else {
-                // User is signed out
-                authSection.classList.remove('hidden');
-                resetPasswordSection.classList.add('hidden');
-                appContent.classList.add('hidden');
-                document.getElementById('bottom-nav').classList.add('hidden');
+                adminNavItem.style.display = 'none';
             }
+            
+            // Load songs and set default tab
+            loadSongs();
+            switchTab('songs');
         });
         
         // Login function
@@ -2273,12 +2290,29 @@
         // Show profile information
         function showProfile() {
             const viewerContent = document.getElementById('viewer-content');
+            const isLoggedIn = !!currentUser;
+            const syncButtonHTML = isLoggedIn ? `
+                <button id="profile-sync-btn" class="sync-button">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Sync Now</span>
+                </button>
+            ` : `
+                <button id="profile-logout-btn" class="sync-button" onclick="showLoginForm()">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span>Sign In (Optional)</span>
+                </button>
+            `;
+
             viewerContent.innerHTML = `
                 <div class="lyric-form">
                     <h2><i class="fas fa-user"></i> Profile</h2>
                     <div class="form-group">
+                        <label>User Type</label>
+                        <input type="text" value="${isLoggedIn ? (currentUser.email === 'simsonpeter@gmail.com' ? 'Admin User' : 'Regular User') : 'Guest User'}" readonly>
+                    </div>
+                    <div class="form-group">
                         <label>Email</label>
-                        <input type="text" value="${currentUser?.email || 'Not logged in'}" readonly>
+                        <input type="text" value="${currentUser?.email || 'Not logged in (Guest)'}" readonly>
                     </div>
                     <div class="form-group">
                         <label>Last Sync</label>
@@ -2293,14 +2327,13 @@
                         <input type="text" id="favorite-count" readonly>
                     </div>
                     <div class="lyric-actions">
-                        <button id="profile-sync-btn" class="sync-button">
-                            <i class="fas fa-sync-alt"></i>
-                            <span>Sync Now</span>
-                        </button>
-                        <button id="profile-logout-btn" class="accent">
-                            <i class="fas fa-sign-out-alt"></i>
-                            <span>Sign Out</span>
-                        </button>
+                        ${syncButtonHTML}
+                        ${isLoggedIn ? `
+                            <button id="profile-logout-btn" class="accent">
+                                <i class="fas fa-sign-out-alt"></i>
+                                <span>Sign Out</span>
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -2309,14 +2342,36 @@
             loadProfileData();
             
             // Add event listeners
-            document.getElementById('profile-sync-btn').addEventListener('click', manualSync);
-            document.getElementById('profile-logout-btn').addEventListener('click', () => {
-                auth.signOut().catch(error => {
-                    alert('Logout error: ' + error.message);
+            const profileSyncBtn = document.getElementById('profile-sync-btn');
+            if (profileSyncBtn) {
+                profileSyncBtn.addEventListener('click', manualSync);
+            }
+            
+            const profileLogoutBtn = document.getElementById('profile-logout-btn');
+            if (profileLogoutBtn) {
+                profileLogoutBtn.addEventListener('click', () => {
+                    auth.signOut().catch(error => {
+                        alert('Logout error: ' + error.message);
+                    });
                 });
-            });
+            }
             
             viewerContent.classList.remove('hidden');
+        }
+
+        // Show login form for guest users
+        function showLoginForm() {
+            document.getElementById('auth-section').classList.remove('hidden');
+            document.getElementById('app-content').classList.add('hidden');
+            document.getElementById('bottom-nav').classList.add('hidden');
+        }
+
+        // Hide login form and continue as guest
+        function hideLoginForm() {
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('app-content').classList.remove('hidden');
+            document.getElementById('bottom-nav').classList.remove('hidden');
+            switchTab('songs');
         }
 
         // Show songs view
@@ -2687,13 +2742,12 @@
             // Initial status update
             updateOnlineStatus();
             
-            if (auth.currentUser) {
-                authSection.classList.add('hidden');
-                appContent.classList.remove('hidden');
-                document.getElementById('bottom-nav').classList.remove('hidden');
-                isInitialized = true;
-                await loadSongs();
-            }
+            // Always initialize the app - no login required
+            authSection.classList.add('hidden');
+            appContent.classList.remove('hidden');
+            document.getElementById('bottom-nav').classList.remove('hidden');
+            isInitialized = true;
+            await loadSongs();
         };
     </script>
 </body>
