@@ -252,6 +252,74 @@
             display: none !important;
         }
 
+        .about-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .about-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 10px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .about-section h3 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .about-section h3 i {
+            color: var(--secondary-color);
+        }
+
+        .about-section p {
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .feature-list li {
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #555;
+        }
+
+        .feature-list li i {
+            color: var(--primary-color);
+            width: 20px;
+        }
+
+        blockquote {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            margin: 0;
+            border-radius: 5px;
+            font-style: italic;
+        }
+
+        blockquote cite {
+            display: block;
+            text-align: right;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
         
         .tabs {
             display: flex;
@@ -961,10 +1029,6 @@
             <i class="fas fa-music"></i>
             <span>Songs</span>
         </a>
-        <a href="#" class="nav-item" data-tab="search">
-            <i class="fas fa-search"></i>
-            <span>Search</span>
-        </a>
         <a href="#" class="nav-item" data-tab="favorites">
             <i class="fas fa-star"></i>
             <span>Favorites</span>
@@ -976,6 +1040,10 @@
         <a href="#" class="nav-item" data-tab="profile">
             <i class="fas fa-user"></i>
             <span>Profile</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="about">
+            <i class="fas fa-info-circle"></i>
+            <span>About</span>
         </a>
     </div>
 
@@ -2278,8 +2346,8 @@
                 document.getElementById('song-index').classList.add('active');
             } else if (tab === 'songs') {
                 showSongsView();
-            } else if (tab === 'search') {
-                showSearchView();
+            } else if (tab === 'about') {
+                showAboutView();
             } else if (tab === 'favorites') {
                 showFavorites();
             } else if (tab === 'profile') {
@@ -2425,75 +2493,54 @@
             }
         }
 
-        // Show search view
-        function showSearchView() {
+        // Show about view
+        function showAboutView() {
             const viewerContent = document.getElementById('viewer-content');
             viewerContent.innerHTML = `
-                <div class="search-bar">
-                    <h2><i class="fas fa-search"></i> Search Songs</h2>
-                    <input type="text" id="search-input" placeholder="Search songs...">
+                <div class="lyric-form">
+                    <h2><i class="fas fa-info-circle"></i> About Us</h2>
+                    <div class="about-content">
+                        <div class="about-section">
+                            <h3><i class="fas fa-church"></i> New Jerusalem Church</h3>
+                            <p>Welcome to the New Jerusalem Church Songbook - a comprehensive collection of worship songs and hymns to enhance your spiritual journey.</p>
+                        </div>
+                        
+                        <div class="about-section">
+                            <h3><i class="fas fa-heart"></i> Our Mission</h3>
+                            <p>To provide easy access to worship songs and enable meaningful fellowship through music, bringing believers together in praise and worship.</p>
+                        </div>
+                        
+                        <div class="about-section">
+                            <h3><i class="fas fa-mobile-alt"></i> Features</h3>
+                            <ul class="feature-list">
+                                <li><i class="fas fa-wifi"></i> Works offline - access songs anywhere</li>
+                                <li><i class="fas fa-star"></i> Favorite songs - keep your favorites</li>
+                                <li><i class="fas fa-search"></i> Search functionality - find songs quickly</li>
+                                <li><i class="fas fa-sync"></i> Auto-sync - always up to date</li>
+                                <li><i class="fas fa-device-mobile"></i> Mobile-first design</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="about-section">
+                    <h3><i class="fas fa-contact-book"></i> Contact</h3>
+                    <p>For questions, song requests, or suggestions:</p>
+                    <p><i class="fas fa-envelope"></i> Email: contact@newjerusalemchurch.org</p>
+                    <p><i class="fas fa-map-marker-alt"></i> Location: [Church Address]</p>
                 </div>
-                <div class="alphabet-index" id="search-alphabet-index"></div>
-                <div id="search-song-index-container">
-                    <div class="song-index" id="search-song-index"></div>
+                        
+                        <div class="about-section">
+                            <h3><i class="fas fa-bible"></i> Scriptures</h3>
+                            <blockquote>
+                                "Make a joyful noise unto the Lord, all ye lands. Serve the Lord with gladness: come before his presence with singing."<br>
+                                <cite>- Psalm 100:1-2</cite>
+                            </blockquote>
+                        </div>
+                    </div>
                 </div>
             `;
-            
-            // Initialize search functionality (with small delay to ensure DOM is updated)
-            setTimeout(() => {
-                setupSearchTab();
-            }, 10);
-            
             viewerContent.classList.remove('hidden');
         }
 
-        // Setup search tab functionality
-        function setupSearchTab() {
-            const searchInput = document.getElementById('search-input');
-            
-            console.log('Setting up Search tab, input found:', !!searchInput);
-            
-            if (searchInput) {
-                searchInput.focus(); // Auto-focus on search tab
-                searchInput.addEventListener('input', (e) => {
-                    const searchTerm = e.target.value.toLowerCase();
-                    console.log('Search tab input event:', searchTerm);
-                    
-                    if (searchTerm === '') {
-                        // Empty search - show all songs (like Songs tab)
-                        currentLetter = '';
-                        renderSongIndex('search-song-index');
-                        document.querySelectorAll('#search-alphabet-index .alphabet-letter').forEach(el => {
-                            if (el.textContent === 'அனைத்தும்') {
-                                el.classList.add('active');
-                            } else {
-                                el.classList.remove('active');
-                            }
-                        });
-                    } else {
-                        // Has search term - show filtered results (same as Songs tab)
-                        const filteredSongs = songs.filter(song => 
-                            song.songTitle.toLowerCase().includes(searchTerm)
-                        );
-                        renderFilteredSongs(filteredSongs, 'search-song-index');
-                    }
-                });
-            }
-            
-            // Initialize alphabet and songs (like Songs tab)
-            currentLetter = '';
-            renderSongIndex('search-song-index');
-            initAlphabetIndex('search-alphabet-index');
-        
-            // Activate the "All" button by default
-            document.querySelectorAll('#search-alphabet-index .alphabet-letter').forEach(el => {
-                if (el.textContent === 'அனைத்தும்') {
-                    el.classList.add('active');
-                } else {
-                    el.classList.remove('active');
-                }
-            });
-        }
 
         // Show favorites
         function showFavorites() {
