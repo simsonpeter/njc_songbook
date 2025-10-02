@@ -2493,6 +2493,13 @@
                         const filteredSongs = songs.filter(song => 
                             song.songTitle.toLowerCase().includes(searchTerm)
                         );
+                        console.log('Search term:', searchTerm, 'Found songs:', filteredSongs.length);
+                        console.log('songs array length:', songs.length);
+                        // Ensure the container is visible before rendering
+                        if (searchSongIndex) {
+                            searchSongIndex.classList.remove('hidden');
+                            searchSongIndex.style.display = 'block';
+                        }
                         renderFilteredSongs(filteredSongs, 'search-song-index');
                     }
                 });
