@@ -1100,36 +1100,19 @@
             });
         }
         
-        // View lyric detail
+        // View lyric detail (online-only)
         async function viewLyric(lyricId) {
             try {
-                let lyric;
-                
-                if (isOnline) {
-                    try {
-                        // Try to get from Firebase first
-                        const doc = await db.collection('lyrics').doc(lyricId).get();
-                        if (doc.exists) {
-                            lyric = doc.data();
-                        } else {
-                            throw new Error('Document not found in Firebase');
-                        }
-                    } catch (error) {
-                        console.log('Firebase fetch failed, trying local storage:', error);
-                        // Fallback to local storage
-                        lyric = await songDB.getSongById(lyricId);
-                        if (!lyric) {
-                            throw new Error('Lyric not found in local storage');
-                        }
-                    }
-                } else {
-                    // Load from local storage when offline
-                    lyric = await songDB.getSongById(lyricId);
-                    if (!lyric) {
-                        throw new Error('Lyric not found in local storage');
-                    }
+                if (!isOnline) {
+                    throw new Error('You are offline. Connect to the internet to view lyrics.');
                 }
-                
+
+                const doc = await db.collection('lyrics').doc(lyricId).get();
+                if (!doc.exists) {
+                    throw new Error('Lyric not found');
+                }
+                const lyric = doc.data();
+
                 currentEditingLyricId = lyricId;
                 
                 let adminControlsHTML = '';
@@ -1282,32 +1265,23 @@
             }
         }
         
-        // Load all songs from Firebase or local storage
+        // Load all songs (online-only fetch; save to device once on load)
         async function loadSongs() {
-            if (isOnline) {
-                try {
-                    // Try to load from Firebase first
-                    const querySnapshot = await db.collection('lyrics').orderBy('songTitle').get();
-                    songs = [];
-                    querySnapshot.forEach(doc => {
-                        songs.push({
-                            id: doc.id,
-                            ...doc.data()
-                        });
-                    });
-                    
-                    // Save to local storage
-                    await songDB.saveSongs(songs);
-                    console.log(`Synced ${songs.length} songs to local storage`);
-                } catch (error) {
-                    console.error('Error loading from Firebase, trying local storage:', error);
-                    // Fallback to local storage
-                    songs = await songDB.getAllSongs();
-                }
+            if (!isOnline) {
+                songs = [];
+                console.warn('Offline: songs not loaded. Connect to sync.');
             } else {
-                // Load from local storage when offline
-                songs = await songDB.getAllSongs();
-                console.log(`Loaded ${songs.length} songs from local storage (offline mode)`);
+                const querySnapshot = await db.collection('lyrics').orderBy('songTitle').get();
+                songs = [];
+                querySnapshot.forEach(doc => {
+                    songs.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                // Save to local storage once per load for device persistence
+                await songDB.saveSongs(songs);
+                console.log(`Synced ${songs.length} songs to device on startup/login`);
             }
             
             updateAvailableLetters();
@@ -1341,9 +1315,7 @@
                     const tabId = tab.getAttribute('data-tab');
                     document.getElementById(tabId).classList.add('active');
                     
-                    if (tabId === 'song-index') {
-                        loadSongs();
-                    } else if (tabId === 'add-lyric') {
+                    if (tabId === 'add-lyric') {
                         // Reset form when switching to add lyric tab
                         if (!currentEditingLyricId) {
                             document.querySelector('#add-lyric h2').textContent = 'Add New Tamil Lyric';
@@ -2241,10 +2213,6 @@
                         <input type="text" id="local-song-count" readonly>
                     </div>
                     <div class="lyric-actions">
-                        <button id="profile-sync-btn" class="sync-button">
-                            <i class="fas fa-sync-alt"></i>
-                            <span>Sync Now</span>
-                        </button>
                         <button id="profile-logout-btn" class="accent">
                             <i class="fas fa-sign-out-alt"></i>
                             <span>Sign Out</span>
@@ -2257,7 +2225,6 @@
             loadProfileData();
             
             // Add event listeners
-            document.getElementById('profile-sync-btn').addEventListener('click', manualSync);
             document.getElementById('profile-logout-btn').addEventListener('click', () => {
                 auth.signOut().catch(error => {
                     alert('Logout error: ' + error.message);
@@ -2392,22 +2359,31 @@
             await initDatabase();
             await initServiceWorker();
             
-            // Initialize pull-to-refresh
-            initPullToRefresh();
-            
             // Initialize bottom navigation
             initBottomNavigation();
             
             // Set up sync button event listener
             const syncBtn = document.getElementById('sync-btn');
             if (syncBtn) {
-                syncBtn.addEventListener('click', manualSync);
+                // Hide sync button (online-only; sync occurs on app open)
+                syncBtn.style.display = 'none';
+            }
+            const syncControls = document.querySelector('.lyric-actions');
+            if (syncControls) {
+                // Hide Delete All in viewer contexts for safety; keep for admin only
+                const deleteAllBtn = document.getElementById('delete-all-lyrics-btn');
+                if (deleteAllBtn && (!currentUser || currentUser.email !== 'simsonpeter@gmail.com')) {
+                    deleteAllBtn.style.display = 'none';
+                }
+            }
+            const pullToRefreshEl = document.getElementById('pull-to-refresh');
+            if (pullToRefreshEl) {
+                pullToRefreshEl.classList.add('hidden');
             }
             
             // Set up online/offline listeners
             window.addEventListener('online', () => {
                 updateOnlineStatus();
-                syncWhenOnline();
             });
             
             window.addEventListener('offline', () => {
