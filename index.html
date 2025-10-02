@@ -731,10 +731,6 @@
                 <div id="status-dot" class="status-dot"></div>
                 <span id="status-text">Online</span>
             </div>
-            <div id="user-info" class="user-info hidden">
-                <span id="user-email"></span>
-                <button id="logout-btn"><i class="fas fa-sign-out-alt"></i></button>
-            </div>
         </div>
     </header>
     
@@ -949,7 +945,6 @@
         const passwordInput = document.getElementById('password');
         const loginBtn = document.getElementById('login-btn');
         const signupBtn = document.getElementById('signup-btn');
-        const logoutBtn = document.getElementById('logout-btn');
         const appContent = document.getElementById('app-content');
         const adminControls = document.getElementById('admin-controls');
         const viewerContent = document.getElementById('viewer-content');
@@ -957,8 +952,6 @@
         const backToIndexBtn = document.getElementById('back-to-index');
         const lyricDetailView = document.getElementById('lyric-detail-view');
         const lyricDetailContent = document.getElementById('lyric-detail-content');
-        const userInfo = document.getElementById('user-info');
-        const userEmail = document.getElementById('user-email');
         const authSection = document.getElementById('auth-section');
         const resetPasswordLink = document.getElementById('reset-password-link');
         const resetPasswordSection = document.getElementById('reset-password-section');
@@ -1408,9 +1401,16 @@
                 // User is signed in
                 authSection.classList.add('hidden');
                 resetPasswordSection.classList.add('hidden');
-                userInfo.classList.remove('hidden');
-                userEmail.textContent = user.email;
                 appContent.classList.remove('hidden');
+                document.getElementById('bottom-nav').classList.remove('hidden');
+                
+                // Show/hide admin nav item based on user
+                const adminNavItem = document.getElementById('admin-nav-item');
+                if (user.email === 'simsonpeter@gmail.com') {
+                    adminNavItem.style.display = 'flex';
+                } else {
+                    adminNavItem.style.display = 'none';
+                }
                 
                 // Check if this is the admin account
                 if (user.email === 'simsonpeter@gmail.com') {
@@ -1427,8 +1427,8 @@
                 // User is signed out
                 authSection.classList.remove('hidden');
                 resetPasswordSection.classList.add('hidden');
-                userInfo.classList.add('hidden');
                 appContent.classList.add('hidden');
+                document.getElementById('bottom-nav').classList.add('hidden');
             }
         });
         
@@ -1462,13 +1462,6 @@
                 });
         });
         
-        // Logout function
-        logoutBtn.addEventListener('click', () => {
-            auth.signOut()
-                .catch(error => {
-                    alert('Logout error: ' + error.message);
-                });
-        });
         
         // Save/Update lyric function
         saveLyricBtn.addEventListener('click', () => {
@@ -2251,6 +2244,10 @@
                             <i class="fas fa-sync-alt"></i>
                             <span>Sync Now</span>
                         </button>
+                        <button id="profile-logout-btn" class="accent">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Sign Out</span>
+                        </button>
                     </div>
                 </div>
             `;
@@ -2258,8 +2255,13 @@
             // Load profile data
             loadProfileData();
             
-            // Add sync button event listener
+            // Add event listeners
             document.getElementById('profile-sync-btn').addEventListener('click', manualSync);
+            document.getElementById('profile-logout-btn').addEventListener('click', () => {
+                auth.signOut().catch(error => {
+                    alert('Logout error: ' + error.message);
+                });
+            });
             
             viewerContent.classList.remove('hidden');
         }
@@ -2416,8 +2418,6 @@
             
             if (auth.currentUser) {
                 authSection.classList.add('hidden');
-                userInfo.classList.remove('hidden');
-                userEmail.textContent = auth.currentUser.email;
                 appContent.classList.remove('hidden');
                 document.getElementById('bottom-nav').classList.remove('hidden');
                 
