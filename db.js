@@ -33,6 +33,11 @@ class SongDatabase {
                 if (!db.objectStoreNames.contains('syncMetadata')) {
                     db.createObjectStore('syncMetadata', { keyPath: 'key' });
                 }
+
+                // Create favorites store
+                if (!db.objectStoreNames.contains('favorites')) {
+                    db.createObjectStore('favorites', { keyPath: 'songId' });
+                }
             };
         });
     }
@@ -139,6 +144,102 @@ class SongDatabase {
         
         const transaction = this.db.transaction(['songs'], 'readonly');
         const store = transaction.objectStore('songs');
+        
+        return new Promise((resolve, reject) => {
+            const request = store.count();
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    // Favorites management
+    async addFavorite(songId) {
+        if (!this.db) await this.init();
+        
+        const transaction = this.db.transaction(['favorites'], 'readwrite');
+        const store = transaction.objectStore('favorites');
+        
+        return new Promise((resolve, reject) => {
+            const favorite = {
+                songId: songId,
+                addedAt: new Date().toISOString(),
+                addedBy: currentUser?.uid || 'anonymous'
+            };
+            const request = store.put(favorite);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async removeFavorite(songId) {
+        if (!this.db) await this.init();
+        
+        const transaction = this.db.transaction(['favorites'], 'readwrite');
+        const store = transaction.objectStore('favorites');
+        
+        return new Promise((resolve, reject) => {
+            const request = store.delete(songId);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async isFavorite(songId) {
+        if (!this.db) await this.init();
+        
+        const transaction = this.db.transaction(['favorites'], 'readonly');
+        const store = transaction.objectStore('favorites');
+        
+        return new Promise((resolve, reject) => {
+            const request = store.get(songId);
+            request.onsuccess = () => resolve(!!request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async getFavoriteSongs() {
+        if (!this.db) await this.init();
+        
+        const transaction = this.db.transaction(['favorites'], 'readonly');
+        const store = transaction.objectStore('favorites');
+        
+        return new Promise((resolve, reject) => {
+            const request = store.getAll();
+            request.onsuccess = () => {
+                const favoriteIds = request.result.map(fav => fav.songId);
+                resolve(favoriteIds);
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async getAllFavoritesWithSongs() {
+        if (!this.db) await this.init();
+        
+        const favoriteIds = await this.getFavoriteSongs();
+        const allSongs = await this.getAllSongs();
+        
+        return allSongs.filter(song => favoriteIds.includes(song.id));
+    }
+
+    async clearAllFavorites() {
+        if (!this.db) await this.init();
+        
+        const transaction = this.db.transaction(['favorites'], 'readwrite');
+        const store = transaction.objectStore('favorites');
+        
+        return new Promise((resolve, reject) => {
+            const request = store.clear();
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async getFavoriteCount() {
+        if (!this.db) await this.init();
+        
+        const transaction = this.db.transaction(['favorites'], 'readonly');
+        const store = transaction.objectStore('favorites');
         
         return new Promise((resolve, reject) => {
             const request = store.count();
