@@ -2,7 +2,7 @@
 class SongDatabase {
     constructor() {
         this.dbName = 'NJC_SongBook';
-        this.dbVersion = 1;
+		this.dbVersion = 2;
         this.db = null;
     }
 
@@ -33,6 +33,11 @@ class SongDatabase {
                 if (!db.objectStoreNames.contains('syncMetadata')) {
                     db.createObjectStore('syncMetadata', { keyPath: 'key' });
                 }
+
+				// Create favorites store (per-song id)
+				if (!db.objectStoreNames.contains('favorites')) {
+					db.createObjectStore('favorites', { keyPath: 'id' });
+				}
             };
         });
     }
@@ -146,6 +151,78 @@ class SongDatabase {
             request.onerror = () => reject(request.error);
         });
     }
+
+	// Favorites APIs
+	async addFavorite(songId) {
+		if (!this.db) await this.init();
+		const tx = this.db.transaction(['favorites'], 'readwrite');
+		const store = tx.objectStore('favorites');
+		return new Promise((resolve, reject) => {
+			const request = store.put({ id: songId, favoritedAt: new Date().toISOString() });
+			request.onsuccess = () => resolve();
+			request.onerror = () => reject(request.error);
+		});
+	}
+
+	async removeFavorite(songId) {
+		if (!this.db) await this.init();
+		const tx = this.db.transaction(['favorites'], 'readwrite');
+		const store = tx.objectStore('favorites');
+		return new Promise((resolve, reject) => {
+			const request = store.delete(songId);
+			request.onsuccess = () => resolve();
+			request.onerror = () => reject(request.error);
+		});
+	}
+
+	async isFavorite(songId) {
+		if (!this.db) await this.init();
+		const tx = this.db.transaction(['favorites'], 'readonly');
+		const store = tx.objectStore('favorites');
+		return new Promise((resolve, reject) => {
+			const request = store.get(songId);
+			request.onsuccess = () => resolve(!!request.result);
+			request.onerror = () => reject(request.error);
+		});
+	}
+
+	async getAllFavoriteIds() {
+		if (!this.db) await this.init();
+		const tx = this.db.transaction(['favorites'], 'readonly');
+		const store = tx.objectStore('favorites');
+		return new Promise((resolve, reject) => {
+			const request = store.getAllKeys();
+			request.onsuccess = () => resolve(request.result || []);
+			request.onerror = () => reject(request.error);
+		});
+	}
+
+	async clearFavorites() {
+		if (!this.db) await this.init();
+		const tx = this.db.transaction(['favorites'], 'readwrite');
+		const store = tx.objectStore('favorites');
+		return new Promise((resolve, reject) => {
+			const request = store.clear();
+			request.onsuccess = () => resolve();
+			request.onerror = () => reject(request.error);
+		});
+	}
+
+	async clearAllData() {
+		if (!this.db) await this.init();
+		const tx = this.db.transaction(['songs', 'syncMetadata', 'favorites'], 'readwrite');
+		const songsStore = tx.objectStore('songs');
+		const metaStore = tx.objectStore('syncMetadata');
+		const favStore = tx.objectStore('favorites');
+		return new Promise((resolve, reject) => {
+			let pending = 3;
+			function done() { if (--pending === 0) resolve(); }
+			function onerr(err) { reject(err); }
+			const r1 = songsStore.clear(); r1.onsuccess = done; r1.onerror = () => onerr(r1.error);
+			const r2 = metaStore.clear(); r2.onsuccess = done; r2.onerror = () => onerr(r2.error);
+			const r3 = favStore.clear(); r3.onsuccess = done; r3.onerror = () => onerr(r3.error);
+		});
+	}
 }
 
 // Global instance
