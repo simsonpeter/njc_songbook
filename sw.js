@@ -3,6 +3,8 @@ const CACHE_NAME = 'njc-songbook-v3';
 const urlsToCache = [
   '/',
   '/index.html',
+  '/offline.html',
+  '/db.js',
   'https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js',
   'https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js',
   'https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js',
@@ -20,13 +22,35 @@ self.addEventListener('install', event => {
 
 // Fetch event - serve from cache when offline
 self.addEventListener('fetch', event => {
+  // Handle navigation requests (HTML) with an app shell strategy
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          return response;
+        })
+        .catch(() => {
+          return caches.match('/index.html')
+            .then(cached => cached || caches.match('/offline.html'));
+        })
+    );
+    return;
+  }
+
+  // For other requests: cache-first, then network, and cache the result
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      }
-    )
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+      return fetch(event.request)
+        .then(networkResponse => {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseClone).catch(() => {});
+          });
+          return networkResponse;
+        })
+        .catch(() => caches.match('/offline.html'));
+    })
   );
 });
 
