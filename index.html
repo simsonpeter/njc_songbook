@@ -2161,25 +2161,6 @@
             }
         });
         
-        document.getElementById('viewer-search-input').addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            if (searchTerm === '') {
-                currentLetter = '';
-                renderSongIndex('viewer-song-index');
-                document.querySelectorAll('#viewer-alphabet-index .alphabet-letter').forEach(el => {
-                    if (el.textContent === 'அனைத்தும்') {
-                        el.classList.add('active');
-                    } else {
-                        el.classList.remove('active');
-                    }
-                });
-            } else {
-                const filteredSongs = songs.filter(song => 
-                    song.songTitle.toLowerCase().includes(searchTerm)
-                );
-                renderFilteredSongs(filteredSongs, 'viewer-song-index');
-            }
-        });
         
         function renderFilteredSongs(filteredSongs, containerId) {
             const container = document.getElementById(containerId);
