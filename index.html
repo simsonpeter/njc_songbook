@@ -2258,8 +2258,10 @@
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
                 document.querySelector('.tab[data-tab="song-index"]').classList.add('active');
                 document.getElementById('song-index').classList.add('active');
-            } else if (tab === 'songs' || tab === 'search') {
-                document.getElementById('viewer-content').classList.remove('hidden');
+            } else if (tab === 'songs') {
+                showSongsView();
+            } else if (tab === 'search') {
+                showSearchView();
             } else if (tab === 'favorites') {
                 showFavorites();
             } else if (tab === 'profile') {
@@ -2315,6 +2317,108 @@
             });
             
             viewerContent.classList.remove('hidden');
+        }
+
+        // Show songs view
+        function showSongsView() {
+            const viewerContent = document.getElementById('viewer-content');
+            viewerContent.innerHTML = `
+                <div class="search-bar">
+                    <input type="text" id="viewer-search-input" placeholder="Search songs...">
+                </div>
+                <div class="alphabet-index" id="viewer-alphabet-index"></div>
+                <div id="viewer-song-index-container">
+                    <div class="song-index" id="viewer-song-index"></div>
+                </div>
+            `;
+            
+            // Initialize and render the song index
+            currentLetter = '';
+            renderSongIndex('viewer-song-index');
+            initAlphabetIndex('viewer-alphabet-index');
+            
+            // Setup search functionality
+            setupViewerSearch();
+            
+            viewerContent.classList.remove('hidden');
+        }
+
+        // Setup viewer search functionality
+        function setupViewerSearch() {
+            const searchInput = document.getElementById('viewer-search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.toLowerCase();
+                    if (searchTerm === '') {
+                        currentLetter = '';
+                        renderSongIndex('viewer-song-index');
+                        document.querySelectorAll('#viewer-alphabet-index .alphabet-letter').forEach(el => {
+                            if (el.textContent === 'அனைத்தும்') {
+                                el.classList.add('active');
+                            } else {
+                                el.classList.remove('active');
+                            }
+                        });
+                    } else {
+                        const filteredSongs = songs.filter(song => 
+                            song.songTitle.toLowerCase().includes(searchTerm)
+                        );
+                        renderFilteredSongs(filteredSongs, 'viewer-song-index');
+                    }
+                });
+            }
+        }
+
+        // Show search view
+        function showSearchView() {
+            const viewerContent = document.getElementById('viewer-content');
+            viewerContent.innerHTML = `
+                <div class="search-bar">
+                    <h2><i class="fas fa-search"></i> Search Songs</h2>
+                    <input type="text" id="search-input" placeholder="Search songs...">
+                </div>
+                <div class="alphabet-index" id="search-alphabet-index"></div>
+                <div id="search-song-index-container">
+                    <div class="song-index" id="search-song-index"></div>
+                </div>
+            `;
+            
+            // Initialize search functionality
+            setupSearchTab();
+            
+            viewerContent.classList.remove('hidden');
+        }
+
+        // Setup search tab functionality
+        function setupSearchTab() {
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.focus(); // Auto-focus on search tab
+                searchInput.addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.toLowerCase();
+                    if (searchTerm === '') {
+                        currentLetter = '';
+                        renderSongIndex('search-song-index');
+                        document.querySelectorAll('#search-alphabet-index .alphabet-letter').forEach(el => {
+                            if (el.textContent === 'அனைத்தும்') {
+                                el.classList.add('active');
+                            } else {
+                                el.classList.remove('active');
+                            }
+                        });
+                    } else {
+                        const filteredSongs = songs.filter(song => 
+                            song.songTitle.toLowerCase().includes(searchTerm)
+                        );
+                        renderFilteredSongs(filteredSongs, 'search-song-index');
+                    }
+                });
+            }
+            
+            // Initialize alphabet and songs
+            currentLetter = '';
+            renderSongIndex('search-song-index');
+            initAlphabetIndex('search-alphabet-index');
         }
 
         // Show favorites
