@@ -1,5 +1,5 @@
 // Service Worker for NJC Song Book
-const CACHE_NAME = 'njc-songbook-v2';
+const CACHE_NAME = 'njc-songbook-v3';
 const urlsToCache = [
   '/',
   '/index.html',
