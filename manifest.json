@@ -1,0 +1,110 @@
+{
+  "name": "NJC Song Book",
+  "short_name": "Song Book",
+  "description": "தமிழ் பாடல் புத்தகம் - Tamil Song Collection with offline access",
+  "version": "2.0.0",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#4a148c",
+  "background_color": "#f5f5f5",
+  "categories": ["music", "education", "entertainment"],
+  "lang": "ta",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/home.png",
+      "sizes": screenshot: "540x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Song List Home Screen"
+    },
+    {
+      "src": "/screenshots/detail.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Song Detail View"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Search Songs",
+      "short_name": "Search",
+      "description": "Quick search through songs",
+      "url": "/?tab=search",
+      "icons": [{ "src": "/shortcuts/search-icon.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Add Song",
+      "short_name": "Add",
+      "description": "Add new song lyric",
+      "url": "/?tab=admin",
+      "icons": [{ "src": "/shortcuts/add-icon.png", "sizes": "96x96" }]
+    }
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "background_sync": {
+    "tags": ["sync-songs", "sync-offline-changes"]
+  },
+  "file_handlers": [
+    {
+      "action": "/import",
+      "accept": {
+        "text/xml": [".xml"],
+        "application/octet-stream": [".db", ".sqlite", ".sqlite3"]
+      }
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+lyrics",
+      "url": "/import?url=%s"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.njc.songbook",
+      "id": "com.njc.songbook"
+    }
+  ],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
+}

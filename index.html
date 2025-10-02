@@ -2,15 +2,58 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="cache-control" content="no-cache, no-store, must-revalidate">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#4a148c">
+    <meta name="msapplication-TileColor" content="#4a148c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="NJC Song Book">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="NJC Song Book">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Favicons and App Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="icon" sizes="192x192" href="/android-chrome-192x192.png">
+    <link rel="icon" sizes="512x512" href="/android-chrome-512x512.png">
+    
+    <!-- Meta tags for SEO and social sharing -->
+    <meta name="description" content="NJC Song Book - தமிழ் பாடல் புத்தகம் with offline access. Browse Tamil songs, lyrics, and music collection.">
+    <meta name="keywords" content="Tamil songs, lyrics, music, offline, PWA, mobile app">
+    <meta name="author" content="NJC">
+    <meta property="og:title" content="NJC Song Book">
+    <meta property="og:description" content="தமிழ் பாடல் புத்தகம் with offline access">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="/">
+    <meta property="og:image" content="/android-chrome-512x512.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="NJC Song Book">
+    <meta name="twitter:description" content="தமிழ் பாடல் புத்தகம் with offline access">
+    <meta name="twitter:image" content="/android-chrome-512x512.png">
+    
     <title>NJC Song Book</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
-    <script src="db.js"></script>
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/index.html" as="document">
+    <link rel="preload" href="/db.js" as="script">
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js" as="script" crossorigin>
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js" as="script" crossorigin>
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js" as="script" crossorigin>
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin>
+    
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js" defer></script>
+    <script src="db.js" defer></script>
     <style>
         :root {
             --primary-color: #4a148c;
@@ -721,9 +764,129 @@
                 margin-bottom: 5px;
             }
         }
+
+        /* Android-specific optimizations */
+        .pwa-installed {
+            /* Hide scrollbars when running as PWA */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .pwa-installed::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Android Chrome address bar compensation */
+        @supports (padding: max(0px)) {
+            body {
+                padding-top: max(80px, env(safe-area-inset-top));
+                padding-bottom: max(80px, env(safe-area-inset-bottom));
+            }
+            
+            @media (orientation: landscape) {
+                body {
+                    padding-top: max(60px, env(safe-area-inset-top));
+                }
+            }
+        }
+
+        /* Better touch targets for Android */
+        button, .nav-item, .tab, .alphabet-letter {
+            min-height: 44px;
+            min-width: 44px;
+            touch-action: manipulation;
+        }
+
+        /* Prevent zoom on input focus (Android) */
+        input[type=text], input[type=password], input[type=email], textarea, select {
+            font-size: 16px;
+            transform: translateZ(0);
+        }
+
+        /* Android splash screen simulation */
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            color: white;
+            animation: splashFadeOut 1.5s ease-in-out 1s forwards;
+        }
+
+        .splash-screen h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            animation: splashSlideIn 0.8s ease-out 0.2s both;
+        }
+
+        .splash-screen h2 {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            animation: splashSlideIn 0.8s ease-out 0.4s both;
+        }
+
+        .splash-screen .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            animation: splashSlideIn 0.8s ease-out 0.6s both, spin 1s linear infinite 0.6s;
+        }
+
+        @keyframes splashFadeOut {
+            to {
+                opacity: 0;
+                visibility: hidden;
+            }
+        }
+
+        @keyframes splashSlideIn {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Avoid 300ms click delay on Android */
+        * {
+            touch-action: manipulation;
+        }
+
+        /* Better keyboard behavior on Android */
+        input:focus, textarea:focus, select:focus {
+            transform: scale(1.02);
+        }
+
+        /* Android keyboard adjustment */
+        @media screen and (max-height: 600px) {
+            .container {
+                padding-bottom: env(keyboard-inset-height, 0px);
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Android Splash Screen -->
+    <div id="splash-screen" class="splash-screen">
+        <h1>NJC Song Book</h1>
+        <h2>தமிழ் பாடல் புத்தகம்</h2>
+        <div class="loading-spinner"></div>
+    </div>
+
     <header>
         <div class="header-content">
             <h1>NJC Song Book</h1>
@@ -2159,17 +2322,351 @@
             }
         }
 
+        // PWA Installation and Update Management
+        let deferredPrompt = null;
+        let swRegistration = null;
+
         // Initialize service worker
         async function initServiceWorker() {
             if ('serviceWorker' in navigator) {
                 try {
-                    const registration = await navigator.serviceWorker.register('/sw.js');
-                    console.log('Service Worker registered successfully:', registration);
+                    swRegistration = await navigator.serviceWorker.register('/sw.js', {
+                        scope: '/'
+                    });
+                    
+                    console.log('Service Worker registered successfully:', swRegistration);
+                    
+                    // Listen for updates
+                    swRegistration.addEventListener('updatefound', () => {
+                        const newWorker = swRegistration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // New update available
+                                showUpdateAvailable();
+                            }
+                        });
+                    });
+                    
+                    // Handle background sync messages
+                    navigator.serviceWorker.addEventListener('message', (event) => {
+                        if (event.data.type === 'BACKGROUND_SYNC') {
+                            handleBackgroundSync(event.data.action);
+                        }
+                    });
+                    
                 } catch (error) {
                     console.log('Service Worker registration failed:', error);
                 }
             }
         }
+
+        // Handle PWA installation prompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('PWA install prompt triggered');
+            e.preventDefault();
+            deferredPrompt = e;
+            showInstallPrompt();
+        });
+
+        // Show install prompt
+        function showInstallPrompt() {
+            if (deferredPrompt && !isPWAInstalled()) {
+                const installButton = document.createElement('button');
+                installButton.innerHTML = '<i class="fas fa-download"></i> Install App';
+                installButton.className = 'accent';
+                installButton.style.cssText = `
+                    position: fixed;
+                    bottom: 100px;
+                    right: 20px;
+                    z-index: 1000;
+                    padding: 12px 20px;
+                    border-radius: 25px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    font-weight: bold;
+                    animation: bounce 2s infinite;
+                `;
+                
+                installButton.addEventListener('click', async () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        console.log(`PWA install outcome: ${outcome}`);
+                        deferredPrompt = null;
+                        installButton.remove();
+                    }
+                });
+                
+                document.body.appendChild(installButton);
+                
+                // Auto-hide after 10 seconds
+                setTimeout(() => {
+                    if (installButton.parentNode) {
+                        installButton.remove();
+                    }
+                }, 10000);
+            }
+        }
+
+        // Show update available notification
+        function showUpdateAvailable() {
+            const updateNotification = document.createElement('div');
+            updateNotification.className = 'update-notification';
+            updateNotification.innerHTML = `
+                <div style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; padding: 15px; border-radius: 10px; text-align: center; margin: 10px;">
+                    <h3>Update Available</h3>
+                    <p>A new version of NJC Song Book is available!</p>
+                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+                        <button id="update-btn" class="accent" style="padding: 8px 20px;">Update Now</button>
+                        <button id="dismiss-update-btn" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 20px; border-radius: 5px;">Dismiss</button>
+                    </div>
+                </div>
+            `;
+            
+            updateNotification.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 10001;
+                animation: slideDown 0.3s ease;
+            `;
+            
+            document.body.appendChild(updateNotification);
+            
+            document.getElementById('update-btn').addEventListener('click', () => {
+                window.location.reload();
+            });
+            
+            document.getElementById('dismiss-update-btn').addEventListener('click', () => {
+                updateNotification.remove();
+            });
+        }
+
+        // Check if PWA is installed
+        function isPWAInstalled() {
+            return window.matchMedia('(display-mode: standalone)').matches ||
+                   window.navigator.standalone === true ||
+                   document.referrer.includes('android-app://');
+        }
+
+        // Handle background sync actions
+        async function handleBackgroundSync(action) {
+            try {
+                if (action === 'sync-songs') {
+                    await loadSongs();
+                    showSyncMessage('Background sync completed!', false);
+                } else if (action === 'sync-changes') {
+                    await syncOfflineChanges();
+                    showSyncMessage('Changes synchronized!', false);
+                }
+            } catch (error) {
+                console.error('Background sync failed:', error);
+                showSyncMessage('Background sync failed: ' + error.message, true);
+            }
+        }
+
+        // Sync offline changes
+        async function syncOfflineChanges() {
+            // This would sync any local changes made while offline
+            // Implementation depends on your data structure
+            console.log('Syncing offline changes...');
+            
+            try {
+                // Example: sync any pending changes from IndexedDB
+                const pendingChanges = await songDB.getPendingChanges();
+                
+                if (pendingChanges.length > 0) {
+                    // Upload changes to server
+                    for (const change of pendingChanges) {
+                        if (change.type === 'create') {
+                            await db.collection('lyrics').add(change.data);
+                        } else if (change.type === 'update') {
+                            await db.collection('lyrics').doc(change.id).update(change.data);
+                        } else if (change.type === 'delete') {
+                            await db.collection('lyrics').doc(change.id).delete();
+                        }
+                        
+                        // Mark as synced
+                        await songDB.markChangeAsSynced(change.id);
+                    }
+                    
+                    console.log(`Synced ${pendingChanges.length} offline changes`);
+                }
+                
+                // Refresh the songs list
+                await loadSongs();
+                
+            } catch (error) {
+                console.error('Error syncing offline changes:', error);
+                throw error;
+            }
+        }
+
+        // Register for periodic background sync
+        async function registerPeriodicSync() {
+            if ('serviceWorker' in navigator && 'PeriodicBackgroundSync' in window) {
+                try {
+                    const registration = await navigator.serviceWorker.ready;
+                    await registration.periodicSync.register('content-sync', {
+                        minInterval: 12 * 60 * 60 * 1000 // 12 hours
+                    });
+                    console.log('Periodic background sync registered');
+                } catch (error) {
+                    console.log('Periodic background sync not supported:', error);
+                }
+            }
+        }
+
+        // Register for push notifications
+        async function requestNotificationPermission() {
+            if ('Notification' in window && 'serviceWorker' in navigator) {
+                const permission = await Notification.requestPermission();
+                
+                if (permission === 'granted') {
+                    console.log('Notification permission granted');
+                    
+                    // Subscribe to push notifications
+                    try {
+                        const registration = await navigator.serviceWorker.ready;
+                        const subscription = await registration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: 'your-vapid-public-key' // Replace with your VAPID public key
+                        });
+                        
+                        console.log('Push subscription:', subscription);
+                        
+                        // Send subscription to your server
+                        // await fetch('/api/subscribe', {
+                        //     method: 'POST',
+                        //     headers: { 'Content-Type': 'application/json' },
+                        //     body: JSON.stringify(subscription)
+                        // });
+                        
+                    } catch (error) {
+                        console.log('Push subscription failed:', error);
+                    }
+                }
+            }
+        }
+
+        // Enhanced sync with retry logic and conflict resolution
+        async function enhancedSync() {
+            if (isSyncing || !isOnline) return;
+            
+            isSyncing = true;
+            let retryCount = 0;
+            const maxRetries = 3;
+            
+            const syncWithRetry = async () => {
+                try {
+                    // Sync songs from server
+                    const querySnapshot = await db.collection('lyrics').orderBy('songTitle').get();
+                    const serverSongs = [];
+                    querySnapshot.forEach(doc => {
+                        serverSongs.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+                    
+                    const localSongs = await songDB.getAllSongs();
+                    
+                    // Merge with conflict resolution
+                    const mergedSongs = mergeSongsWithConflictResolution(serverSongs, localSongs);
+                    
+                    // Save merged songs to local storage
+                    await songDB.saveSongs(mergedSongs);
+                    
+                    // Update local songs array
+                    songs = mergedSongs;
+                    updateAvailableLetters();
+                    currentLetter = '';
+                    renderSongIndex('song-index-list');
+                    renderSongIndex('viewer-song-index');
+                    initAlphabetIndex('alphabet-index');
+                    initAlphabetIndex('viewer-alphabet-index');
+                    
+                    console.log(`Enhanced sync completed: ${mergedSongs.length} songs`);
+                    showSyncMessage('Sync complete!', false);
+                    
+                } catch (error) {
+                    retryCount++;
+                    
+                    if (retryCount < maxRetries) {
+                        console.log(`Sync failed, retrying in ${retryCount * 2} seconds...`, error);
+                        showSyncMessage(`Sync failed, retrying... (${retryCount}/${maxRetries})`, true);
+                        
+                        setTimeout(() => {
+                            syncWithRetry();
+                        })                        , retryCount * 2000);
+                    } else {
+                        console.error('Sync failed after all retries:', error);
+                        showSyncMessage('Sync failed: ' + error.message, true);
+                    }
+                }
+            };
+            
+            syncWithRetry().finally(() => {
+                isSyncing = false;
+            });
+        }
+
+        // Conflict resolution for songs
+        function mergeSongsWithConflictResolution(serverSongs, localSongs) {
+            const mergedMap = new Map();
+            
+            // Add server songs first
+            serverSongs.forEach(song => {
+                mergedMap.set(song.id, { ...song, source: 'server' });
+            });
+            
+            // Merge local songs with conflict resolution
+            localSongs.forEach(localSong => {
+                const existingSong = mergedMap.get(localSong.id);
+                
+                if (!existingSong) {
+                    // New local song
+                    mergedMap.set(localSong.id, { ...localSong, source: 'local' });
+                } else {
+                    // Conflict resolution: prefer server version if both exist
+                    // In a real app, you might want more sophisticated conflict resolution
+                    const lastModified = existingSong.lastUpdated?.toDate ? 
+                        existingSong.lastModified.toDate().getTime() : 0;
+                    const localLastModified = localSong.lastModified?.toDate ? 
+                        localSong.lastModified.toDate().getTime() : 0;
+                    
+                    if (localLastModified > lastModified) {
+                        mergedMap.set(localSong.id, { ...localSong, source: 'merged' });
+                    }
+                }
+            });
+            
+            return Array.from(mergedMap.values());
+        }
+
+        // Update sync button functionality
+        const originalManualSync = manualSync;
+        manualSync = enhancedSync;
+
+        // CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes bounce {
+                0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+                40% { transform: translateY(-10px); }
+                60% { transform: translateY(-5px); }
+            }
+            
+            @keyframes slideDown {
+                from { transform: translateY(-100%); }
+                to { transform: translateY(0); }
+            }
+            
+            .update-notification {
+                animation: slideDown 0.3s ease;
+            }
+        `;
+        document.head.appendChild(style);
 
         // Initialize IndexedDB
         async function initDatabase() {
@@ -2392,10 +2889,12 @@
             await initDatabase();
             await initServiceWorker();
             
-            // Initialize pull-to-refresh
-            initPullToRefresh();
+            // Initialize PWA features
+            await registerPeriodicSync();
+            await requestNotificationPermission();
             
-            // Initialize bottom navigation
+            // Initialize app features
+            initPullToRefresh();
             initBottomNavigation();
             
             // Set up sync button event listener
@@ -2404,21 +2903,43 @@
                 syncBtn.addEventListener('click', manualSync);
             }
             
-            // Set up online/offline listeners
+            // Set up online/offline listeners with enhanced functionality
             window.addEventListener('online', () => {
                 updateOnlineStatus();
                 syncWhenOnline();
+                
+                // Trigger background sync
+                if ('serviceWorker' in navigator && 'BackgroundSync' in window.serviceWorker) {
+                    navigator.serviceWorker.ready.then(registration => {
+                        registration.sync.register('sync-songs');
+                    });
+                }
             });
             
             window.addEventListener('offline', () => {
                 updateOnlineStatus();
+                showSyncMessage('You are now offline. Changes will sync when connection is restored.');
             });
+            
+            // Enhanced initialization for PWA
+            if (isPWAInstalled()) {
+                console.log('App is running as PWA');
+                document.body.classList.add('pwa-installed');
+                
+                // Request permissions for PWA features
+                if ('geolocation' in navigator && 'Permission' in navigator) {
+                    navigator.permissions.query({ name: 'geolocation' });
+                }
+            }
             
             // Initial status update
             updateOnlineStatus();
             
+            // Load app data if user is authenticated
             if (auth.currentUser) {
+                currentUser = auth.currentUser;
                 authSection.classList.add('hidden');
+                resetPasswordSection.classList.add('hidden');
                 appContent.classList.remove('hidden');
                 document.getElementById('bottom-nav').classList.remove('hidden');
                 
@@ -2432,8 +2953,63 @@
                 
                 isInitialized = true;
                 await loadSongs();
+                
+                // Auto-sync if online
+                if (isOnline) {
+                    setTimeout(() => {
+                        manualSync();
+                    }, 2000);
+                }
             }
+            
+            // Hide splash screen after initialization
+            setTimeout(() => {
+                const splashScreen = document.getElementById('splash-screen');
+                if (splashScreen) {
+                    splashScreen.style.display = 'none';
+                }
+            }, 1500);
         };
+
+        // Handle app visibility changes (PWA lifecycle)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && isOnline && isInitialized) {
+                // App became visible and online, trigger sync
+                setTimeout(() => {
+                    manualSync();
+                }, 1000);
+            }
+        });
+
+        // Handle page unload (save state for PWA)
+        window.addEventListener('beforeunload', () => {
+            // Save current state to IndexedDB
+            if (isInitialized) {
+                songDB.updateSyncMetadata('lastSessionState', {
+                    currentTab,
+                    currentLetter,
+                    timestamp: Date.now()
+                });
+            }
+        });
+
+        // Restore session state on load
+        async function restoreSessionState() {
+            try {
+                const lastState = await songDB.getSyncMetadata('lastSessionState');
+                if (lastState) {
+                    currentTab = lastState.currentTab || 'songs';
+                    currentLetter = lastState.currentLetter || '';
+                    
+                    // Restore UI state
+                    if (currentTab && document.querySelector(`[data-tab="${currentTab}"]`)) {
+                        switchTab(currentTab);
+                    }
+                }
+            } catch (error) {
+                console.log('Could not restore session state:', error);
+            }
+        }
     </script>
 </body>
 </html>
