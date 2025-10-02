@@ -1,0 +1,10 @@
+{
+  "name": "NJC Song Book",
+  "short_name": "SongBook",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#4a148c",
+  "theme_color": "#4a148c",
+  "icons": []
+}

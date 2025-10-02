@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="cache-control" content="no-cache, no-store, must-revalidate">
     <title>NJC Song Book</title>
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#4a148c">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
@@ -2417,6 +2421,10 @@
             // Initial status update
             updateOnlineStatus();
             
+            // Always attempt initial sync for viewer content once DB is ready
+            isInitialized = true;
+            await loadSongs();
+
             if (auth.currentUser) {
                 authSection.classList.add('hidden');
                 appContent.classList.remove('hidden');
@@ -2430,8 +2438,7 @@
                     adminNavItem.style.display = 'none';
                 }
                 
-                isInitialized = true;
-                await loadSongs();
+                // already loaded
             }
         };
     </script>
