@@ -455,16 +455,20 @@
             font-size: 0.8rem;
         }
 
-        .status-indicator {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.8rem;
-            font-weight: 500;
+        .connection-status {
+            padding: 10px 15px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .connection-status .status-indicator {
+            position: static;
+            background: none;
+            padding: 0;
+            color: #333;
+            gap: 8px;
+            font-size: 1rem;
         }
 
         .status-dot {
@@ -852,10 +856,6 @@
         <div class="header-content">
             <h1>NJC Song Book</h1>
             <h2 class="tamil-title">பாடல் புத்தகம்</h2>
-            <div id="status-indicator" class="status-indicator hidden">
-                <div id="status-dot" class="status-dot"></div>
-                <span id="status-text">Online</span>
-            </div>
         </div>
     </header>
     
@@ -2174,12 +2174,10 @@
         // Online/Offline status management
         function updateOnlineStatus() {
             isOnline = navigator.onLine;
-            const statusIndicator = document.getElementById('status-indicator');
             const statusDot = document.getElementById('status-dot');
             const statusText = document.getElementById('status-text');
             
-            if (statusIndicator) {
-                statusIndicator.classList.remove('hidden');
+            if (statusDot && statusText) {
                 if (isOnline) {
                     statusDot.classList.remove('offline');
                     statusText.textContent = 'Online';
@@ -2376,6 +2374,15 @@
                 <div class="lyric-form">
                     <h2><i class="fas fa-user"></i> Profile</h2>
                     <div class="form-group">
+                        <label>Connection Status</label>
+                        <div class="connection-status">
+                            <div class="status-indicator">
+                                <div id="status-dot" class="status-dot"></div>
+                                <span id="status-text">Online</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
                         <label>User Type</label>
                         <input type="text" value="${isLoggedIn ? (currentUser.email === 'simsonpeter@gmail.com' ? 'Admin User' : 'User (Favorites Synced)') : 'Guest (Local Favorites Only)'}" readonly>
                     </div>
@@ -2388,11 +2395,11 @@
                         <input type="text" id="last-sync-time" readonly>
                     </div>
                     <div class="form-group">
-                        <label>Local Songs</label>
+                        <label>Local Books</label>
                         <input type="text" id="local-song-count" readonly>
                     </div>
                     <div class="form-group">
-                        <label>Favorites</label>
+                        <label>Favourites</label>
                         <input type="text" id="favorite-count" readonly>
                     </div>
                     <div class="lyric-actions">
@@ -2407,8 +2414,9 @@
                 </div>
             `;
             
-            // Load profile data
+            // Load profile data and update status
             loadProfileData();
+            updateOnlineStatus();
             
             // Add event listeners
             const profileSyncBtn = document.getElementById('profile-sync-btn');
