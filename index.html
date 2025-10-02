@@ -2439,8 +2439,10 @@
                 </div>
             `;
             
-            // Initialize search functionality
-            setupSearchTab();
+            // Initialize search functionality (with small delay to ensure DOM is updated)
+            setTimeout(() => {
+                setupSearchTab();
+            }, 10);
             
             viewerContent.classList.remove('hidden');
         }
@@ -2449,10 +2451,13 @@
         function setupSearchTab() {
             const searchInput = document.getElementById('search-input');
             
+            console.log('Setting up Search tab, input found:', !!searchInput);
+            
             if (searchInput) {
                 searchInput.focus(); // Auto-focus on search tab
                 searchInput.addEventListener('input', (e) => {
                     const searchTerm = e.target.value.toLowerCase();
+                    console.log('Search tab input event:', searchTerm);
                     
                     if (searchTerm === '') {
                         // Empty search - show all songs (like Songs tab)
@@ -2466,7 +2471,7 @@
                             }
                         });
                     } else {
-                        // Has search term - show filtered results
+                        // Has search term - show filtered results (same as Songs tab)
                         const filteredSongs = songs.filter(song => 
                             song.songTitle.toLowerCase().includes(searchTerm)
                         );
