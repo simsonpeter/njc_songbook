@@ -2085,15 +2085,24 @@
         });
         
         function renderFilteredSongs(filteredSongs, containerId) {
+            console.log('renderFilteredSongs called:', filteredSongs.length, 'songs for container:', containerId);
             const container = document.getElementById(containerId);
             const parentContainer = document.getElementById(`${containerId}-container`);
             
+            console.log('Container found:', !!container, 'Parent container found:', !!parentContainer);
+            
             if (!container) {
+                console.log('Creating new container:', containerId);
                 parentContainer.innerHTML = '<div class="song-index" id="' + containerId + '"></div>';
             }
             
             const targetContainer = container || document.getElementById(containerId);
-            targetContainer.innerHTML = '';
+            console.log('Target container found:', !!targetContainer);
+            if (targetContainer) {
+                targetContainer.innerHTML = '';
+            } else {
+                console.error('No target container found!');
+            }
             
             if (filteredSongs.length === 0) {
                 parentContainer.innerHTML = '<div class="no-songs">No songs found matching your search</div>';
@@ -2495,11 +2504,15 @@
                         );
                         console.log('Search term:', searchTerm, 'Found songs:', filteredSongs.length);
                         console.log('songs array length:', songs.length);
-                        // Ensure the container is visible before rendering
+                        console.log('About to call renderFilteredSongs with container:', 'search-song-index');
+                        
+                        // Ensure containers are visible
                         if (searchSongIndex) {
-                            searchSongIndex.classList.remove('hidden');
-                            searchSongIndex.style.display = 'block';
+                            if (filteredSongs.length > 0) {
+                                searchSongIndex.classList.remove('hidden');
+                            }
                         }
+                        
                         renderFilteredSongs(filteredSongs, 'search-song-index');
                     }
                 });
@@ -2507,6 +2520,12 @@
             
             // Initialize alphabet index (but keep it hidden initially)
             initAlphabetIndex('search-alphabet-index');
+            
+            // Initialize the search song index container (but keep hidden)
+            const searchSongIndexContainer = document.getElementById('search-song-index');
+            if (searchSongIndexContainer) {
+                searchSongIndexContainer.innerHTML = '';
+            }
         }
 
         // Show favorites
