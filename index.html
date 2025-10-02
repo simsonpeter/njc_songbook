@@ -578,7 +578,7 @@
             
             .lyrics-list {
                 grid-template-columns: 1fr;
-                gap: 15px;
+            gap: 15px;
             }
             
             .lyric-card {
@@ -1194,7 +1194,7 @@
                     try {
                         // Try to get from Firebase first
                         const doc = await db.collection('lyrics').doc(lyricId).get();
-                        if (doc.exists) {
+                    if (doc.exists) {
                             lyric = doc.data();
                         } else {
                             throw new Error('Document not found in Firebase');
@@ -1215,23 +1215,23 @@
                     }
                 }
                 
-                currentEditingLyricId = lyricId;
-                
-                let adminControlsHTML = '';
-                if (currentUser && currentUser.email === 'simsonpeter@gmail.com') {
-                    adminControlsHTML = `
-                        <div style="margin-top: 30px;">
-                            <button class="accent" onclick="editLyric()">Edit Lyric</button>
-                            <button class="accent" onclick="deleteLyric('${lyricId}')">Delete Lyric</button>
-                        </div>
-                    `;
-                }
-                
+                        currentEditingLyricId = lyricId;
+                        
+                        let adminControlsHTML = '';
+                        if (currentUser && currentUser.email === 'simsonpeter@gmail.com') {
+                            adminControlsHTML = `
+                                <div style="margin-top: 30px;">
+                                    <button class="accent" onclick="editLyric()">Edit Lyric</button>
+                                    <button class="accent" onclick="deleteLyric('${lyricId}')">Delete Lyric</button>
+                                </div>
+                            `;
+                        }
+                        
                 const createdDate = lyric.createdAt?.toDate ? 
                     new Date(lyric.createdAt.toDate()).toLocaleDateString() : 
                     (lyric.createdAt ? new Date(lyric.createdAt).toLocaleDateString() : 'Unknown');
                 
-                lyricDetailContent.innerHTML = `
+                        lyricDetailContent.innerHTML = `
                     <div class="song-header">
                         <div class="song-title-section">
                             <h2>${lyric.songTitle}</h2>
@@ -1243,24 +1243,24 @@
                         <button id="favorite-btn-${lyricId}" class="favorite-btn ${isFavorite(lyricId) ? 'active' : ''}" onclick="toggleFavorite('${lyricId}')">
                             <i class="${isFavorite(lyricId) ? 'fas' : 'far'} fa-star"></i>
                         </button>
-                    </div>
-                    
-                    <div class="meta-item">
-                        ${lyric.movieName ? `<p><strong>Movie:</strong> ${lyric.movieName}</p>` : ''}
-                        ${lyric.musicDirector ? `<p><strong>Music:</strong> ${lyric.musicDirector}</p>` : ''}
-                        ${lyric.lyricist ? `<p><strong>Lyrics:</strong> ${lyric.lyricist}</p>` : ''}
-                        ${lyric.singer ? `<p><strong>Singer:</strong> ${lyric.singer}</p>` : ''}
-                    </div>
-                    
-                    <div class="lyric-text">${lyric.lyricsText}</div>
-                    ${adminControlsHTML}
-                `;
-                
-                viewerContent.classList.add('hidden');
-                adminControls.classList.add('hidden');
-                lyricDetailView.classList.remove('hidden');
+                            </div>
+                            
+                            <div class="meta-item">
+                                ${lyric.movieName ? `<p><strong>Movie:</strong> ${lyric.movieName}</p>` : ''}
+                                ${lyric.musicDirector ? `<p><strong>Music:</strong> ${lyric.musicDirector}</p>` : ''}
+                                ${lyric.lyricist ? `<p><strong>Lyrics:</strong> ${lyric.lyricist}</p>` : ''}
+                                ${lyric.singer ? `<p><strong>Singer:</strong> ${lyric.singer}</p>` : ''}
+                            </div>
+                            
+                            <div class="lyric-text">${lyric.lyricsText}</div>
+                            ${adminControlsHTML}
+                        `;
+                        
+                        viewerContent.classList.add('hidden');
+                        adminControls.classList.add('hidden');
+                        lyricDetailView.classList.remove('hidden');
             } catch (error) {
-                alert('Error loading lyric: ' + error.message);
+                    alert('Error loading lyric: ' + error.message);
             }
         }
         
@@ -1401,22 +1401,22 @@
                 songs = await songDB.getAllSongs();
                 console.log(`Loaded ${songs.length} songs from local storage (offline mode)`);
             }
-            
-            updateAvailableLetters();
-            currentLetter = '';
-            renderSongIndex('song-index-list');
-            renderSongIndex('viewer-song-index');
-            initAlphabetIndex('alphabet-index');
-            initAlphabetIndex('viewer-alphabet-index');
-            
-            // Activate the "All" button by default
-            document.querySelectorAll('.alphabet-index .alphabet-letter').forEach(el => {
-                if (el.textContent === 'அனைத்தும்') {
-                    el.classList.add('active');
-                } else {
-                    el.classList.remove('active');
-                }
-            });
+                    
+                    updateAvailableLetters();
+                    currentLetter = '';
+                    renderSongIndex('song-index-list');
+                    renderSongIndex('viewer-song-index');
+                    initAlphabetIndex('alphabet-index');
+                    initAlphabetIndex('viewer-alphabet-index');
+                    
+                    // Activate the "All" button by default
+                    document.querySelectorAll('.alphabet-index .alphabet-letter').forEach(el => {
+                        if (el.textContent === 'அனைத்தும்') {
+                            el.classList.add('active');
+                        } else {
+                            el.classList.remove('active');
+                        }
+                });
         }
         
         // Tab switching
@@ -1491,17 +1491,17 @@
         auth.onAuthStateChanged(user => {
             currentUser = user;
             // Always show the app - no login required for basic usage
-            authSection.classList.add('hidden');
-            resetPasswordSection.classList.add('hidden');
-            appContent.classList.remove('hidden');
+                authSection.classList.add('hidden');
+                resetPasswordSection.classList.add('hidden');
+                appContent.classList.remove('hidden');
             document.getElementById('bottom-nav').classList.remove('hidden');
             
             // Show/hide admin nav item based on user (only show for admin)
             const adminNavItem = document.getElementById('admin-nav-item');
             if (user && user.email === 'simsonpeter@gmail.com') {
                 adminNavItem.style.display = 'flex';
-                setupTabs();
-            } else {
+                    setupTabs();
+                } else {
                 adminNavItem.style.display = 'none';
             }
             
@@ -2085,24 +2085,15 @@
         });
         
         function renderFilteredSongs(filteredSongs, containerId) {
-            console.log('renderFilteredSongs called:', filteredSongs.length, 'songs for container:', containerId);
             const container = document.getElementById(containerId);
             const parentContainer = document.getElementById(`${containerId}-container`);
             
-            console.log('Container found:', !!container, 'Parent container found:', !!parentContainer);
-            
             if (!container) {
-                console.log('Creating new container:', containerId);
                 parentContainer.innerHTML = '<div class="song-index" id="' + containerId + '"></div>';
             }
             
             const targetContainer = container || document.getElementById(containerId);
-            console.log('Target container found:', !!targetContainer);
-            if (targetContainer) {
-                targetContainer.innerHTML = '';
-            } else {
-                console.error('No target container found!');
-            }
+            targetContainer.innerHTML = '';
             
             if (filteredSongs.length === 0) {
                 parentContainer.innerHTML = '<div class="no-songs">No songs found matching your search</div>';
@@ -2502,17 +2493,6 @@
                         const filteredSongs = songs.filter(song => 
                             song.songTitle.toLowerCase().includes(searchTerm)
                         );
-                        console.log('Search term:', searchTerm, 'Found songs:', filteredSongs.length);
-                        console.log('songs array length:', songs.length);
-                        console.log('About to call renderFilteredSongs with container:', 'search-song-index');
-                        
-                        // Ensure containers are visible
-                        if (searchSongIndex) {
-                            if (filteredSongs.length > 0) {
-                                searchSongIndex.classList.remove('hidden');
-                            }
-                        }
-                        
                         renderFilteredSongs(filteredSongs, 'search-song-index');
                     }
                 });
@@ -2520,12 +2500,6 @@
             
             // Initialize alphabet index (but keep it hidden initially)
             initAlphabetIndex('search-alphabet-index');
-            
-            // Initialize the search song index container (but keep hidden)
-            const searchSongIndexContainer = document.getElementById('search-song-index');
-            if (searchSongIndexContainer) {
-                searchSongIndexContainer.innerHTML = '';
-            }
         }
 
         // Show favorites
@@ -2759,7 +2733,7 @@
                 currentY = 0;
             });
         }
-
+        
         // Initialize
         window.onload = async () => {
             // Initialize database and service worker
@@ -2795,8 +2769,8 @@
             updateOnlineStatus();
             
             // Always initialize the app - no login required
-            authSection.classList.add('hidden');
-            appContent.classList.remove('hidden');
+                authSection.classList.add('hidden');
+                appContent.classList.remove('hidden');
             document.getElementById('bottom-nav').classList.remove('hidden');
             isInitialized = true;
             await loadSongs();
