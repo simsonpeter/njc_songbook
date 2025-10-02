@@ -2832,6 +2832,13 @@
         
         // Initialize
         window.onload = async () => {
+            // Force scroll position to top on load and disable automatic restoration
+            if ('scrollRestoration' in history) {
+                history.scrollRestoration = 'manual';
+            }
+            window.scrollTo(0, 0);
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
             // Initialize database and service worker
             await initDatabase();
             await initServiceWorker();
@@ -2870,7 +2877,21 @@
             document.getElementById('bottom-nav').classList.remove('hidden');
             isInitialized = true;
             await loadSongs();
+            // Ensure we are at the very top after initial content render
+            window.requestAnimationFrame(() => {
+                window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                document.body.scrollTop = 0;
+                document.documentElement.scrollTop = 0;
+            });
         };
+        // When navigating back/forward, ensure the page starts at the top
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                window.scrollTo(0, 0);
+                document.body.scrollTop = 0;
+                document.documentElement.scrollTop = 0;
+            }
+        });
     </script>
 </body>
 </html>
