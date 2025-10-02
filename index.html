@@ -1425,11 +1425,17 @@
                     loadSongs();
                 }
             } else {
-                // User is signed out
+                // User is signed out - show viewer mode
                 authSection.classList.remove('hidden');
                 resetPasswordSection.classList.add('hidden');
-                appContent.classList.add('hidden');
-                document.getElementById('bottom-nav').classList.add('hidden');
+                appContent.classList.remove('hidden');
+                document.getElementById('bottom-nav').classList.remove('hidden');
+                // Hide admin-specific UI
+                const adminNavItem = document.getElementById('admin-nav-item');
+                if (adminNavItem) adminNavItem.style.display = 'none';
+                adminControls.classList.add('hidden');
+                viewerContent.classList.remove('hidden');
+                loadSongs();
             }
         });
         
@@ -2430,6 +2436,16 @@
                     adminNavItem.style.display = 'none';
                 }
                 
+                isInitialized = true;
+                await loadSongs();
+            } else {
+                // Fallback: show viewer mode even before auth state callback
+                appContent.classList.remove('hidden');
+                document.getElementById('bottom-nav').classList.remove('hidden');
+                const adminNavItem = document.getElementById('admin-nav-item');
+                if (adminNavItem) adminNavItem.style.display = 'none';
+                adminControls.classList.add('hidden');
+                viewerContent.classList.remove('hidden');
                 isInitialized = true;
                 await loadSongs();
             }
