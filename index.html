@@ -30,7 +30,7 @@
             padding: 0;
             background-color: #f5f5f5;
             color: #333;
-            padding-top: 80px;
+            padding-top: 70px;
             padding-bottom: 80px;
         }
         
@@ -43,7 +43,7 @@
         header {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
-            padding: 15px 0;
+            padding: 8px 0;
             text-align: center;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             position: fixed;
@@ -370,6 +370,38 @@
             gap: 8px;
             margin-bottom: 25px;
             justify-content: center;
+            align-items: center;
+        }
+
+        .expanded-alphabet {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .alphabet-toggle-btn {
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .alphabet-toggle-btn:hover {
+            background: var(--primary-color);
+            transform: translateY(-1px);
+        }
+
+        .alphabet-toggle-btn i {
+            transition: transform 0.3s ease;
         }
         
         .alphabet-letter {
@@ -1151,6 +1183,11 @@
             });
             container.appendChild(allLetter);
             
+            // Create expandable/collapsible container for alphabet
+            const alphabetContainer = document.createElement('div');
+            alphabetContainer.id = containerId + '-expanded';
+            alphabetContainer.className = 'expanded-alphabet hidden';
+            
             // Add Tamil letters that have songs
             tamilAlphabet.forEach(letter => {
                 const hasSongs = availableLetters.has(letter);
@@ -1169,8 +1206,28 @@
                     });
                 }
                 
-                container.appendChild(letterEl);
+                alphabetContainer.appendChild(letterEl);
             });
+            
+            container.appendChild(alphabetContainer);
+            
+            // Create "More Alphabet" button
+            const moreBtn = document.createElement('div');
+            moreBtn.className = 'alphabet-toggle-btn';
+            moreBtn.innerHTML = '<i class="fas fa-chevron-down"></i> More Alphabet';
+            moreBtn.addEventListener('click', () => toggleAlphabetExpanded(alphabetContainer, moreBtn));
+            container.appendChild(moreBtn);
+        }
+
+        function toggleAlphabetExpanded(alphabetContainer, toggleBtn) {
+            const isHidden = alphabetContainer.classList.contains('hidden');
+            if (isHidden) {
+                alphabetContainer.classList.remove('hidden');
+                toggleBtn.innerHTML = '<i class="fas fa-chevron-up"></i> Hide Alphabet';
+            } else {
+                alphabetContainer.classList.add('hidden');
+                toggleBtn.innerHTML = '<i class="fas fa-chevron-down"></i> More Alphabet';
+            }
         }
         
         // Analyze songs to determine which Tamil letters are present
