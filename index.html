@@ -650,6 +650,54 @@
             font-weight: bold;
         }
         
+        /* Favorites styling */
+        .favorite-btn {
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #ccc;
+            transition: all 0.3s;
+            padding: 5px;
+            margin-left: 10px;
+        }
+        
+        .favorite-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .favorite-btn.active {
+            color: #ff4d4f;
+            text-shadow: 0 0 5px rgba(255, 77, 79, 0.5);
+        }
+        
+        .favorite-btn.active:hover {
+            color: #ff7875;
+        }
+        
+        .song-title-with-fav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .favorites-section {
+            padding: 20px 0;
+        }
+        
+        .favorites-empty {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .favorites-empty i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #ddd;
+        }
+        
         @media (max-width: 900px) {
             body {
                 padding-top: 200px;
@@ -887,6 +935,17 @@
                 </div>
             </div>
             
+            <div id="favorites-content" class="hidden">
+                <div class="favorites-section">
+                    <div class="search-bar">
+                        <input type="text" id="favorites-search-input" placeholder="Search favorites...">
+                    </div>
+                    <div id="favorites-song-index-container">
+                        <div class="song-index" id="favorites-song-index"></div>
+                    </div>
+                </div>
+            </div>
+            
             <div id="lyric-detail-view" class="hidden">
                 <button id="back-to-index" class="accent back-button"><i class="fas fa-arrow-left"></i> Back to Index</button>
                 <div class="lyric-detail-container" id="lyric-detail-content"></div>
@@ -899,6 +958,10 @@
         <a href="#" class="nav-item active" data-tab="songs">
             <i class="fas fa-music"></i>
             <span>Songs</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="favorites">
+            <i class="fas fa-heart"></i>
+            <span>Favorites</span>
         </a>
         <a href="#" class="nav-item" data-tab="search">
             <i class="fas fa-search"></i>
@@ -999,6 +1062,7 @@
             isPulling: false,
             threshold: 80
         };
+        let userFavorites = new Set(); // Track user's favorite song IDs
         
         // Initialize Tamil alphabet index based on available songs
         function initAlphabetIndex(containerId) {
@@ -1063,7 +1127,7 @@
             let filteredSongs = [...songs];
             
             if (currentLetter && currentLetter !== '') {
-                filteredSongs = filteredSongs.filter(song => {
+               filteredSongs = filteredSongs.filter(song => {
                     return song.songTitle && song.songTitle.charAt(0) === currentLetter;
                 });
             }
@@ -1087,6 +1151,9 @@
                 const songEl = document.createElement('div');
                 songEl.className = 'song-index-item';
                 
+                const songContainer = document.createElement('div');
+                songContainer.className = 'song-title-with-fav';
+                
                 const songLink = document.createElement('a');
                 songLink.href = '#';
                 songLink.textContent = song.songTitle;
@@ -1095,7 +1162,22 @@
                     viewLyric(song.id);
                 });
                 
-                songEl.appendChild(songLink);
+                const favoriteBtn = document.createElement('button');
+                favoriteBtn.className = 'favorite-btn';
+                if (userFavorites.has(song.id)) {
+                    favoriteBtn.classList.add('active');
+                }
+                favoriteBtn.innerHTML = '<i class="fas fa-heart"></i>';
+                favoriteBtn.addEventListener('click', (e) => toggleFavorite(song.id, e));
+                
+                // Style the favorite button
+                favoriteBtn.style.border = 'none';
+                favoriteBtn.style.padding = '5px';
+                favoriteBtn.style.backgroundColor = 'transparent';
+                
+                songContainer.appendChild(songLink);
+                songContainer.appendChild(favoriteBtn);
+                songEl.appendChild(songContainer);
                 targetContainer.appendChild(songEl);
             });
         }
@@ -1142,6 +1224,17 @@
                     `;
                 }
                 
+                // Add favorite button for all users
+                const favoriteBtnClass = userFavorites.has(lyricId) ? 'favorite-btn active' : 'favorite-btn';
+                const favoriteButtonHTML = `
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button class="${favoriteBtnClass} accent" onclick="toggleLyricFavorite('${lyricId}')">
+                            <i class="fas fa-heart"></i>
+                            ${userFavorites.has(lyricId) ? 'Remove from Favorites' : 'Add to Favorites'}
+                        </button>
+                    </div>
+                `;
+                
                 const createdDate = lyric.createdAt?.toDate ? 
                     new Date(lyric.createdAt.toDate()).toLocaleDateString() : 
                     (lyric.createdAt ? new Date(lyric.createdAt).toLocaleDateString() : 'Unknown');
@@ -1161,6 +1254,7 @@
                     </div>
                     
                     <div class="lyric-text">${lyric.lyricsText}</div>
+                    ${favoriteButtonHTML}
                     ${adminControlsHTML}
                 `;
                 
@@ -1212,6 +1306,36 @@
         }
         
         // Delete lyric
+        // Toggle favorite from lyric detail view
+        window.toggleLyricFavorite = function(lyricId) {
+            if (!currentUser) {
+                alert('Please log in to use favorites');
+                return;
+            }
+            
+            const favoriteBtn = document.querySelector('.favorite-btn');
+            const isCurrentlyFavorite = userFavorites.has(lyricId);
+            
+            if (isCurrentlyFavorite) {
+                removeFavorite(lyricId).then(() => {
+                    userFavorites.delete(lyricId);
+                    favoriteBtn.classList.remove('active');
+                    favoriteBtn.innerHTML = '<i class="fas fa-heart"></i> Add to Favorites';
+                });
+            } else {
+                addFavorite(lyricId).then(() => {
+                    userFavorites.add(lyricId);
+                    favoriteBtn.classList.add('active');
+                    favoriteBtn.innerHTML = '<i class="fas fa-heart"></i> Remove from Favorites';
+                });
+            }
+            
+            // Refresh favorites view if it's active
+            if (currentTab === 'favorites') {
+                setTimeout(() => renderFavorites(), 100);
+            }
+        }
+
         window.deleteLyric = function(lyricId) {
             if (confirm('Are you sure you want to delete this lyric?')) {
                 db.collection('lyrics').doc(lyricId).delete()
@@ -1269,6 +1393,167 @@
                 .catch(error => {
                     alert('Error deleting all lyrics: ' + error.message);
                 });
+        }
+
+        // Favorites functionality
+        async function toggleFavorite(songId, event) {
+            if (!currentUser) {
+                alert('Please log in to use favorites');
+                return;
+            }
+            
+            event.stopPropagation();
+            
+            const isCurrentlyFavorite = userFavorites.has(songId);
+            const favoriteIcon = event.target;
+            
+            try {
+                if (isCurrentlyFavorite) {
+                    await removeFavorite(songId);
+                    favoriteIcon.classList.remove('active');
+                    userFavorites.delete(songId);
+                } else {
+                    await addFavorite(songId);
+                    favoriteIcon.classList.add('active');
+                    userFavorites.add(songId);
+                }
+                
+                // Update favorites view if it's currently active
+                if (currentTab === 'favorites') {
+                    await renderFavorites();
+                }
+            } catch (error) {
+                console.error('Error toggling favorite:', error);
+                alert('Error updating favorite: ' + error.message);
+            }
+        }
+
+        async function addFavorite(songId) {
+            const userId = currentUser.uid;
+            
+            // Save to local storage
+            await songDB.addFavorite(userId, songId);
+            
+            // Sync to Firebase if online
+            if (isOnline) {
+                try {
+                    const favoriteRef = db.collection('favorites').doc(`${userId}_${songId}`);
+                    await favoriteRef.set({
+                        userId,
+                        songId,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (error) {
+                    console.log('Failed to sync favorite to Firebase:', error);
+                    // Continue execution - favorite is saved locally
+                }
+            }
+        }
+
+        async function removeFavorite(songId) {
+            const userId = currentUser.uid;
+            
+            // Remove from local storage
+            await songDB.removeFavorite(userId, songId);
+            
+            // Remove from Firebase if online
+            if (isOnline) {
+                try {
+                    const favoriteRef = db.collection('favorites').doc(`${userId}_${songId}`);
+                    await favoriteRef.delete();
+                } catch (error) {
+                    console.log('Failed to remove favorite from Firebase:', error);
+                    // Continue execution - favorite is removed locally
+                }
+            }
+        }
+
+        async function loadUserFavorites() {
+            if (!currentUser) return;
+            
+            try {
+                const userId = currentUser.uid;
+                
+                if (isOnline) {
+                    // Try to load from Firebase first
+                    const favoritesSnapshot = await db.collection('favorites')
+                        .where('userId', '==', userId)
+                        .get();
+                    
+                    const firebaseFavorites = [];
+                    favoritesSnapshot.forEach(doc => {
+                        firebaseFavorites.push({
+                            id: doc.id,
+                            ...doc.data(),
+                            songId: doc.data().songId // Make sure songId is available
+                        });
+                    });
+                    
+                    // Sync to local storage
+                    if (firebaseFavorites.length > 0) {
+                        await songDB.syncFavorites(firebaseFavorites);
+                    }
+                    
+                    // Load favorites IDs for UI updates
+                    userFavorites.clear();
+                    firebaseFavorites.forEach(fav => userFavorites.add(fav.songId));
+                } else {
+                    // Load from local storage when offline
+                    const localFavorites = await songDB.getUserFavorites(userId);
+                    userFavorites.clear();
+                    localFavorites.forEach(fav => userFavorites.add(fav.songId));
+                }
+                
+                console.log(`Loaded ${userFavorites.size} favorites for user`);
+            } catch (error) {
+                console.error('Error loading user favorites:', error);
+            }
+        }
+
+        async function renderFavorites() {
+            if (!currentUser) {
+                const parentContainer = document.getElementById('favorites-song-index-container');
+                parentContainer.innerHTML = `
+                    <div class="favorites-empty">
+                        <i class="fas fa-user-lock"></i>
+                        <div>Please log in to view favorites</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                const favoriteSongs = await songDB.getFavoriteSongs(currentUser.uid);
+                
+                if (favoriteSongs.length === 0) {
+                    const parentContainer = document.getElementById('favorites-song-index-container');
+                    parentContainer.innerHTML = `
+                        <div class="favorites-empty">
+                            <i class="fas fa-heart"></i>
+                            <div>No favorites yet</div>
+                            <div style="font-size: 0.9rem; margin-top: 10px; color: #999;">
+                                Start adding songs to your favorites by tapping the heart icon
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                renderFavoritesSongs(favoriteSongs);
+            } catch (error) {
+                console.error('Error rendering favorites:', error);
+                const parentContainer = document.getElementById('favorites-song-index-container');
+                parentContainer.innerHTML = `
+                    <div class="favorites-empty">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>Error loading favorites</div>
+                        <div style="font-size: 0.9rem; margin-top: 10px; color: #999;">
+                            Please try refreshing the page
+                        </div>
+                    </div>
+                `;
+            }
         }
         
         // Back to index view
@@ -1424,6 +1709,9 @@
                     viewerContent.classList.remove('hidden');
                     loadSongs();
                 }
+                
+                // Load user favorites after loading songs
+                await loadUserFavorites();
             } else {
                 // User is signed out
                 authSection.classList.remove('hidden');
@@ -2007,6 +2295,87 @@
             }
         });
         
+        // Favorites search functionality
+        document.getElementById('favorites-search-input').addEventListener('input', async (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            if (!currentUser) return;
+            
+            try {
+                let favoriteSongs = await songDB.getFavoriteSongs(currentUser.uid);
+                
+                if (searchTerm !== '') {
+                    favoriteSongs = favoriteSongs.filter(song => 
+                        song.songTitle.toLowerCase().includes(searchTerm)
+                    );
+                }
+                
+                renderFavoritesSongs(favoriteSongs);
+            } catch (error) {
+                console.error('Error searching favorites:', error);
+            }
+        });
+        
+        // Helper function to render favorite songs list
+        function renderFavoritesSongs(favoriteSongs) {
+            const container = document.getElementById('favorites-song-index');
+            const parentContainer = document.getElementById('favorites-song-index-container');
+            
+            if (!container) {
+                parentContainer.innerHTML = '<div class="song-index" id="favorites-song-index"></div>';
+            }
+            
+            const targetContainer = document.getElementById('favorites-song-index');
+            targetContainer.innerHTML = '';
+            
+            if (favoriteSongs.length === 0) {
+                parentContainer.innerHTML = `
+                    <div class="favorites-empty">
+                        <i class="fas fa-search"></i>
+                        <div>No favorites found</div>
+                        <div style="font-size: 0.9rem; margin-top: 10px; color: #999;">
+                            Try a different search term
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Clear and recreate container
+            parentContainer.innerHTML = '<div class="song-index" id="favorites-song-index"></div>';
+            const newContainer = document.getElementById('favorites-song-index');
+            
+            favoriteSongs.forEach(song => {
+                const songEl = document.createElement('div');
+                songEl.className = 'song-index-item';
+                
+                const songContainer = document.createElement('div');
+                songContainer.className = 'song-title-with-fav';
+                
+                const songLink = document.createElement('a');
+                songLink.href = '#';
+                songLink.textContent = song.songTitle;
+                songLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    viewLyric(song.id);
+                });
+                
+                const favoriteBtn = document.createElement('button');
+                favoriteBtn.className = 'favorite-btn active';
+                favoriteBtn.innerHTML = '<i class="fas fa-heart"></i>';
+                favoriteBtn.addEventListener('click', (e) => toggleFavorite(song.id, e));
+                
+                // Style the favorite button
+                favoriteBtn.style.border = 'none';
+                favoriteBtn.style.padding = '5px';
+                favoriteBtn.style.backgroundColor = 'transparent';
+                
+                songContainer.appendChild(songLink);
+                songContainer.appendChild(favoriteBtn);
+                songEl.appendChild(songContainer);
+                newContainer.appendChild(songEl);
+            });
+        }
+        
         function renderFilteredSongs(filteredSongs, containerId) {
             const container = document.getElementById(containerId);
             const parentContainer = document.getElementById(`${containerId}-container`);
@@ -2027,6 +2396,9 @@
                 const songEl = document.createElement('div');
                 songEl.className = 'song-index-item';
                 
+                const songContainer = document.createElement('div');
+                songContainer.className = 'song-title-with-fav';
+                
                 const songLink = document.createElement('a');
                 songLink.href = '#';
                 songLink.textContent = song.songTitle;
@@ -2035,7 +2407,22 @@
                     viewLyric(song.id);
                 });
                 
-                songEl.appendChild(songLink);
+                const favoriteBtn = document.createElement('button');
+                favoriteBtn.className = 'favorite-btn';
+                if (userFavorites.has(song.id)) {
+                    favoriteBtn.classList.add('active');
+                }
+                favoriteBtn.innerHTML = '<i class="fas fa-heart"></i>';
+                favoriteBtn.addEventListener('click', (e) => toggleFavorite(song.id, e));
+                
+                // Style the favorite button
+                favoriteBtn.style.border = 'none';
+                favoriteBtn.style.padding = '5px';
+                favoriteBtn.style.backgroundColor = 'transparent';
+                
+                songContainer.appendChild(songLink);
+                songContainer.appendChild(favoriteBtn);
+                songEl.appendChild(songContainer);
                 targetContainer.appendChild(songEl);
             });
         }
@@ -2110,7 +2497,15 @@
                     }
                 });
                 
-                console.log(`Synced ${newSongs.length} songs`);
+                // Sync user favorites
+                if (currentUser) {
+                    await loadUserFavorites();
+                    if (currentTab === 'favorites') {
+                        await renderFavorites();
+                    }
+                }
+                
+                console.log(`Synced ${newSongs.length} songs and favorites`);
                 
                 // Show success message
                 showSyncMessage('Sync complete!', false);
@@ -2145,13 +2540,19 @@
             }, isError ? 3000 : 2000);
         }
 
-        // Sync songs when coming back online
+        // Sync songs and favorites when coming back online
         async function syncWhenOnline() {
             if (isOnline && isInitialized && !isSyncing) {
                 showSyncMessage('Syncing songs...', false);
                 
                 try {
                     await loadSongs();
+                    if (currentUser) {
+                        await loadUserFavorites();
+                        if (currentTab === 'favorites') {
+                            await renderFavorites();
+                        }
+                    }
                     showSyncMessage('Sync complete!', false);
                 } catch (error) {
                     showSyncMessage('Sync failed: ' + error.message, true);
@@ -2208,6 +2609,7 @@
             // Hide all content
             document.getElementById('admin-controls').classList.add('hidden');
             document.getElementById('viewer-content').classList.add('hidden');
+            document.getElementById('favorites-content').classList.add('hidden');
             document.getElementById('lyric-detail-view').classList.add('hidden');
             
             // Show appropriate content
@@ -2216,6 +2618,9 @@
                 document.querySelector('.tab[data-tab="song-index"]').click();
             } else if (tab === 'songs' || tab === 'search') {
                 document.getElementById('viewer-content').classList.remove('hidden');
+            } else if (tab === 'favorites') {
+                document.getElementById('favorites-content').classList.remove('hidden');
+                renderFavorites();
             } else if (tab === 'profile') {
                 // Show user profile info
                 showProfile();
