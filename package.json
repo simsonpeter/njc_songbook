@@ -1,0 +1,21 @@
+{
+  "name": "njc-songbook",
+  "version": "1.0.0",
+  "description": "NJC Tamil Song Book - Tamil, Telugu, Malayalam and other South Indian songs",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "build": "echo 'Build complete - static files ready for deployment'",
+    "dev": "python -m http.server 8000"
+  },
+  "keywords": ["tamil", "songs", "lyrics", "music", "app", "pwa"],
+  "author": "NJC Song Book",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "."
+  }
+}
