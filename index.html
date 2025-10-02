@@ -1456,17 +1456,14 @@
                     adminNavItem.style.display = 'none';
                 }
                 
-                // Check if this is the admin account
+                // Setup tabs for admin users
                 if (user.email === 'simsonpeter@gmail.com') {
-                    adminControls.classList.remove('hidden');
-                    viewerContent.classList.add('hidden');
                     setupTabs();
-                    loadSongs();
-                } else {
-                    adminControls.classList.add('hidden');
-                    viewerContent.classList.remove('hidden');
-                    loadSongs();
                 }
+                
+                // Load songs and set default tab
+                loadSongs();
+                switchTab('songs'); // Always start on songs tab regardless of user type
             } else {
                 // User is signed out
                 authSection.classList.remove('hidden');
@@ -2256,7 +2253,11 @@
             // Show appropriate content
             if (tab === 'admin' && currentUser && currentUser.email === 'simsonpeter@gmail.com') {
                 document.getElementById('admin-controls').classList.remove('hidden');
-                document.querySelector('.tab[data-tab="song-index"]').click();
+                // Ensure song-index tab is active within admin controls
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.querySelector('.tab[data-tab="song-index"]').classList.add('active');
+                document.getElementById('song-index').classList.add('active');
             } else if (tab === 'songs' || tab === 'search') {
                 document.getElementById('viewer-content').classList.remove('hidden');
             } else if (tab === 'favorites') {
@@ -2586,15 +2587,6 @@
                 authSection.classList.add('hidden');
                 appContent.classList.remove('hidden');
                 document.getElementById('bottom-nav').classList.remove('hidden');
-                
-                // Show/hide admin nav item based on user
-                const adminNavItem = document.getElementById('admin-nav-item');
-                if (currentUser && currentUser.email === 'simsonpeter@gmail.com') {
-                    adminNavItem.style.display = 'flex';
-                } else {
-                    adminNavItem.style.display = 'none';
-                }
-                
                 isInitialized = true;
                 await loadSongs();
             }
