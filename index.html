@@ -2281,8 +2281,12 @@
             // Update button state
             if (syncBtn) {
                 syncBtn.disabled = true;
-                syncIcon.innerHTML = '<div class="spinner"></div>';
-                syncText.textContent = 'Syncing...';
+                if (syncIcon) {
+                    syncIcon.innerHTML = '<div class="spinner"></div>';
+                }
+                if (syncText) {
+                    syncText.textContent = 'Syncing...';
+                }
             }
 
             try {
@@ -2327,8 +2331,12 @@
                 // Reset button state
                 if (syncBtn) {
                     syncBtn.disabled = false;
-                    syncIcon.innerHTML = '<i class="fas fa-sync-alt"></i>';
-                    syncText.textContent = 'Sync';
+                    if (syncIcon) {
+                        syncIcon.innerHTML = '<i class="fas fa-sync-alt"></i>';
+                    }
+                    if (syncText) {
+                        syncText.textContent = 'Sync';
+                    }
                 }
                 isSyncing = false;
             }
