@@ -1193,6 +1193,12 @@
         // Initialize Tamil alphabet index based on available songs
         function initAlphabetIndex(containerId) {
             const container = document.getElementById(containerId);
+            
+            // If container doesn't exist, the view is not active, so skip initialization
+            if (!container) {
+                return;
+            }
+            
             container.innerHTML = '';
 
             // Add All option
