@@ -943,6 +943,7 @@
                     <div class="tab" data-tab="add-lyric"><i class="fas fa-plus"></i> Add</div>
                     <div class="tab" data-tab="import-sqlite"><i class="fas fa-database"></i> SQLite</div>
                     <div class="tab" data-tab="import-xml"><i class="fas fa-file-code"></i> XML</div>
+                    <div class="tab" data-tab="service-manage"><i class="fas fa-church"></i> Service</div>
                 </div>
                 <div class="lyric-actions">
                     <button id="sync-btn" class="sync-button" title="Sync songs">
@@ -1059,6 +1060,34 @@
                         <div id="xml-import-progress" class="reset-message hidden"></div>
                     </div>
                 </div>
+
+                <div class="tab-content" id="service-manage">
+                    <div class="lyric-form">
+                        <h2><i class="fas fa-church"></i> Manage Sunday Service Songs</h2>
+                        <p>Add songs to the service list. Users will see them in the Service tab in the order you add
+                            them.</p>
+
+                        <div class="form-group">
+                            <label>Current Service Songs (<span id="service-count">0</span>)</label>
+                            <div id="service-songs-list" class="song-index"
+                                style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
+                                <div class="no-songs">No songs added yet</div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Add Song to Service</label>
+                            <select id="service-song-select" class="form-control">
+                                <option value="">-- Select a song --</option>
+                            </select>
+                        </div>
+
+                        <div class="lyric-actions">
+                            <button id="add-to-service-btn" class="accent">Add to Service</button>
+                            <button id="clear-service-btn" class="sync-button">Clear All</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div id="viewer-content">
@@ -1084,6 +1113,10 @@
         <a href="#" class="nav-item active" data-tab="songs">
             <i class="fas fa-music"></i>
             <span>Songs</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="service">
+            <i class="fas fa-church"></i>
+            <span>Service</span>
         </a>
         <a href="#" class="nav-item" data-tab="favorites">
             <i class="fas fa-star"></i>
@@ -2462,6 +2495,8 @@
                 showAboutView();
             } else if (tab === 'favorites') {
                 showFavorites();
+            } else if (tab === 'service') {
+                showService();
             } else if (tab === 'profile') {
                 // Show user profile info
                 showProfile();
@@ -2736,6 +2771,132 @@
             });
         }
 
+        // Service songs management
+        let serviceSongs = [];
+
+        async function loadServiceSongs() {
+            try {
+                const snapshot = await db.collection('serviceSongs').orderBy('order').get();
+                serviceSongs = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                console.log(`Loaded ${serviceSongs.length} service songs`);
+            } catch (error) {
+                console.error('Error loading service songs:', error);
+                serviceSongs = [];
+            }
+        }
+
+        function showService() {
+            const viewerContent = document.getElementById('viewer-content');
+
+            if (serviceSongs.length === 0) {
+                viewerContent.innerHTML = `
+                    <div class="no-songs">
+                        <i class="fas fa-church" style="font-size: 3rem; color: #ccc; margin-bottom: 20px;"></i>
+                        <h2>No Service Songs</h2>
+                        <p>Admin will add songs for the upcoming service.</p>
+                    </div>
+                `;
+            } else {
+                viewerContent.innerHTML = `
+                    <div class="search-bar">
+                        <h2><i class="fas fa-church"></i> Sunday Service (${serviceSongs.length})</h2>
+                    </div>
+                    <div id="service-song-index-container">
+                        <div class="song-index" id="service-song-index"></div>
+                    </div>
+                `;
+
+                renderServiceSongs();
+            }
+
+            viewerContent.classList.remove('hidden');
+        }
+
+        function renderServiceSongs() {
+            const container = document.getElementById('service-song-index');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            serviceSongs.forEach((serviceSong, index) => {
+                const song = songs.find(s => s.id === serviceSong.id);
+                if (!song) return;
+
+                const songEl = document.createElement('div');
+                songEl.className = 'song-index-item';
+
+                const orderNum = document.createElement('span');
+                orderNum.style.cssText = 'color: #666; margin-right: 10px; font-weight: bold;';
+                orderNum.textContent = `${index + 1}.`;
+
+                const songLink = document.createElement('a');
+                songLink.href = '#';
+                songLink.textContent = song.songTitle;
+                songLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    viewLyric(song.id);
+                });
+
+                songEl.appendChild(orderNum);
+                songEl.appendChild(songLink);
+                container.appendChild(songEl);
+            });
+        }
+
+        async function addToService(songId) {
+            if (!currentUser || currentUser.email !== 'simsonpeter@gmail.com') {
+                alert('Only admin can manage service songs');
+                return;
+            }
+
+            try {
+                const song = songs.find(s => s.id === songId);
+                if (!song) return;
+
+                const order = serviceSongs.length;
+                await db.collection('serviceSongs').doc(songId).set({
+                    songTitle: song.songTitle,
+                    order: order,
+                    addedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    addedBy: currentUser.uid
+                });
+
+                await loadServiceSongs();
+                alert(`Added "${song.songTitle}" to service`);
+            } catch (error) {
+                console.error('Error adding to service:', error);
+                alert('Failed to add song to service');
+            }
+        }
+
+        async function removeFromService(songId) {
+            if (!currentUser || currentUser.email !== 'simsonpeter@gmail.com') {
+                alert('Only admin can manage service songs');
+                return;
+            }
+
+            try {
+                await db.collection('serviceSongs').doc(songId).delete();
+                await loadServiceSongs();
+
+                // Reorder remaining songs
+                const batch = db.batch();
+                serviceSongs.forEach((song, index) => {
+                    const ref = db.collection('serviceSongs').doc(song.id);
+                    batch.update(ref, { order: index });
+                });
+                await batch.commit();
+
+                alert('Removed from service');
+            } catch (error) {
+                console.error('Error removing from service:', error);
+                alert('Failed to remove song from service');
+            }
+        }
+
         // Load profile data
         async function loadProfileData() {
             try {
@@ -2996,6 +3157,108 @@
             document.getElementById('bottom-nav').classList.remove('hidden');
             isInitialized = true;
             await loadSongs();
+            await loadServiceSongs();
+
+            // Service management event listeners
+            const addToServiceBtn = document.getElementById('add-to-service-btn');
+            const clearServiceBtn = document.getElementById('clear-service-btn');
+            const serviceSongSelect = document.getElementById('service-song-select');
+
+            if (addToServiceBtn) {
+                addToServiceBtn.addEventListener('click', async () => {
+                    const songId = serviceSongSelect.value;
+                    if (!songId) {
+                        alert('Please select a song');
+                        return;
+                    }
+
+                    // Check if already in service
+                    if (serviceSongs.find(s => s.id === songId)) {
+                        alert('This song is already in the service list');
+                        return;
+                    }
+
+                    await addToService(songId);
+                    updateServiceManagementUI();
+                    serviceSongSelect.value = '';
+                });
+            }
+
+            if (clearServiceBtn) {
+                clearServiceBtn.addEventListener('click', async () => {
+                    if (!confirm('Are you sure you want to clear all service songs?')) return;
+
+                    try {
+                        const batch = db.batch();
+                        serviceSongs.forEach(song => {
+                            batch.delete(db.collection('serviceSongs').doc(song.id));
+                        });
+                        await batch.commit();
+                        await loadServiceSongs();
+                        updateServiceManagementUI();
+                        alert('All service songs cleared');
+                    } catch (error) {
+                        console.error('Error clearing service songs:', error);
+                        alert('Failed to clear service songs');
+                    }
+                });
+            }
+
+            // Update service management UI
+            function updateServiceManagementUI() {
+                const serviceCountEl = document.getElementById('service-count');
+                const serviceListEl = document.getElementById('service-songs-list');
+
+                if (serviceCountEl) {
+                    serviceCountEl.textContent = serviceSongs.length;
+                }
+
+                if (serviceListEl) {
+                    if (serviceSongs.length === 0) {
+                        serviceListEl.innerHTML = '<div class="no-songs">No songs added yet</div>';
+                    } else {
+                        serviceListEl.innerHTML = '';
+                        serviceSongs.forEach((serviceSong, index) => {
+                            const song = songs.find(s => s.id === serviceSong.id);
+                            if (!song) return;
+
+                            const songEl = document.createElement('div');
+                            songEl.className = 'song-index-item';
+                            songEl.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+
+                            const titleSpan = document.createElement('span');
+                            titleSpan.textContent = `${index + 1}. ${song.songTitle}`;
+
+                            const removeBtn = document.createElement('button');
+                            removeBtn.className = 'accent';
+                            removeBtn.style.cssText = 'padding: 5px 10px; font-size: 12px;';
+                            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                            removeBtn.onclick = async () => {
+                                await removeFromService(serviceSong.id);
+                                updateServiceManagementUI();
+                            };
+
+                            songEl.appendChild(titleSpan);
+                            songEl.appendChild(removeBtn);
+                            serviceListEl.appendChild(songEl);
+                        });
+                    }
+                }
+
+                // Populate song select
+                if (serviceSongSelect && songs.length > 0) {
+                    serviceSongSelect.innerHTML = '<option value="">-- Select a song --</option>';
+                    songs.forEach(song => {
+                        const option = document.createElement('option');
+                        option.value = song.id;
+                        option.textContent = song.songTitle;
+                        serviceSongSelect.appendChild(option);
+                    });
+                }
+            }
+
+            // Initial update
+            updateServiceManagementUI();
         };
     </script>
 </body>
