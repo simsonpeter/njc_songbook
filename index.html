@@ -1302,6 +1302,11 @@
 
             const targetContainer = container || document.getElementById(containerId);
 
+            // If targetContainer doesn't exist, the view is not active, so skip rendering
+            if (!targetContainer) {
+                return;
+            }
+
             filteredSongs.forEach(song => {
                 const songEl = document.createElement('div');
                 songEl.className = 'song-index-item';
