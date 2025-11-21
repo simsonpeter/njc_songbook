@@ -1182,7 +1182,7 @@
         let isInitialized = false;
         let isSyncing = false;
         let currentTab = 'songs';
-        let favorites = new Set(); // Store favorite song IDs
+        let favorites = new Map(); // Store favorite song IDs with timestamps
         let pullToRefresh = {
             startY: 0,
             currentY: 0,
@@ -2707,8 +2707,12 @@
             // Clear existing content
             container.innerHTML = '';
 
-            // Sort alphabetically
-            favoriteSongs.sort((a, b) => a.songTitle.localeCompare(b.songTitle, 'ta'));
+            // Sort by user-added order (timestamp)
+            favoriteSongs.sort((a, b) => {
+                const timeA = favorites.get(a.id) || 0;
+                const timeB = favorites.get(b.id) || 0;
+                return timeA - timeB; // Earlier timestamps first
+            });
 
             if (favoriteSongs.length === 0) {
                 parentContainer.innerHTML = '<div class="no-songs">No favorite songs found.</div>';
@@ -2755,7 +2759,7 @@
                 btn.classList.remove('active');
                 btn.innerHTML = '<i class="far fa-star"></i>';
             } else {
-                favorites.add(songId);
+                favorites.set(songId, Date.now());
                 btn.classList.add('active');
                 btn.innerHTML = '<i class="fas fa-star"></i>';
             }
@@ -2786,10 +2790,10 @@
                     const firestoreFavorites = new Set(snapshot.docs.map(doc => doc.id));
 
                     // Add new favorites
-                    favorites.forEach(songId => {
+                    favorites.forEach((timestamp, songId) => {
                         if (!firestoreFavorites.has(songId)) {
                             batch.set(favoritesRef.doc(songId), {
-                                favoritedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                favoritedAt: firebase.firestore.Timestamp.fromMillis(timestamp)
                             });
                         }
                     });
@@ -2815,7 +2819,11 @@
                 if (currentUser) {
                     try {
                         const snapshot = await db.collection('users').doc(currentUser.uid).collection('favorites').get();
-                        favorites = new Set(snapshot.docs.map(doc => doc.id));
+                        favorites = new Map();
+                        snapshot.docs.forEach(doc => {
+                            const data = doc.data();
+                            favorites.set(doc.id, data.favoritedAt ? data.favoritedAt.toMillis() : Date.now());
+                        });
                         console.log(`Loaded ${favorites.size} favorites from Firestore`);
 
                         // Also save to localStorage as backup
@@ -2829,12 +2837,13 @@
                 // Fallback to localStorage (for guests or if Firestore fails)
                 const saved = localStorage.getItem('songbook-favorites');
                 if (saved) {
-                    favorites = new Set(JSON.parse(saved));
+                    const parsed = JSON.parse(saved);
+                    favorites = new Map(parsed);
                     console.log(`Loaded ${favorites.size} favorites from localStorage`);
                 }
             } catch (error) {
                 console.error('Error loading favorites:', error);
-                favorites = new Set();
+                favorites = new Map();
             }
         }
 
