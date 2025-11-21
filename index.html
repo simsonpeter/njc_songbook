@@ -827,9 +827,7 @@
         }
 
         @media (max-width: 900px) {
-            body {
-                padding-top: 200px;
-            }
+            /* Removed excessive body padding */
 
             .song-index {
                 column-count: 2;
@@ -837,6 +835,10 @@
         }
 
         @media (max-width: 768px) {
+            body {
+                padding-top: 130px;
+            }
+
             .lyrics-list {
                 grid-template-columns: 1fr;
             }
@@ -884,7 +886,7 @@
 
         @media (max-width: 480px) {
             body {
-                padding-top: 220px;
+                padding-top: 140px;
             }
 
             .tabs {
@@ -2773,17 +2775,45 @@
 
         // Service songs management
         let serviceSongs = [];
+        let serviceSongsUnsubscribe = null;
 
-        async function loadServiceSongs() {
+        function loadServiceSongs() {
             try {
-                const snapshot = await db.collection('serviceSongs').orderBy('order').get();
-                serviceSongs = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                console.log(`Loaded ${serviceSongs.length} service songs`);
+                // Unsubscribe from previous listener if exists
+                if (serviceSongsUnsubscribe) {
+                    serviceSongsUnsubscribe();
+                }
+
+                // Set up real-time listener
+                serviceSongsUnsubscribe = db.collection('serviceSongs').orderBy('order').onSnapshot(
+                    (snapshot) => {
+                        serviceSongs = snapshot.docs.map(doc => ({
+                            id: doc.id,
+                            ...doc.data()
+                        }));
+                        console.log(`Loaded ${serviceSongs.length} service songs`);
+
+                        // Auto-refresh the service view if it's currently active
+                        if (currentTab === 'service') {
+                            showService();
+                        }
+
+                        // Update service count in manage tab if visible
+                        const serviceCountEl = document.getElementById('service-count');
+                        if (serviceCountEl) {
+                            serviceCountEl.textContent = serviceSongs.length;
+                        }
+
+                        // Update service songs list in manage tab if visible
+                        updateServiceManageList();
+                    },
+                    (error) => {
+                        console.error('Error loading service songs:', error);
+                        serviceSongs = [];
+                    }
+                );
             } catch (error) {
-                console.error('Error loading service songs:', error);
+                console.error('Error setting up service songs listener:', error);
                 serviceSongs = [];
             }
         }
@@ -2846,6 +2876,49 @@
             });
         }
 
+        function updateServiceManageList() {
+            // This function updates the service management UI in the admin tab
+            // It's called by the real-time listener when service songs change
+            const serviceCountEl = document.getElementById('service-count');
+            const serviceListEl = document.getElementById('service-songs-list');
+
+            if (serviceCountEl) {
+                serviceCountEl.textContent = serviceSongs.length;
+            }
+
+            if (serviceListEl) {
+                if (serviceSongs.length === 0) {
+                    serviceListEl.innerHTML = '<div class="no-songs">No songs added yet</div>';
+                } else {
+                    serviceListEl.innerHTML = '';
+                    serviceSongs.forEach((serviceSong, index) => {
+                        const song = songs.find(s => s.id === serviceSong.id);
+                        if (!song) return;
+
+                        const songEl = document.createElement('div');
+                        songEl.className = 'song-index-item';
+                        songEl.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+
+                        const titleSpan = document.createElement('span');
+                        titleSpan.textContent = `${index + 1}. ${song.songTitle}`;
+
+                        const removeBtn = document.createElement('button');
+                        removeBtn.className = 'accent';
+                        removeBtn.style.cssText = 'padding: 5px 10px; font-size: 12px;';
+                        removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                        removeBtn.onclick = async () => {
+                            await removeFromService(serviceSong.id);
+                        };
+
+                        songEl.appendChild(titleSpan);
+                        songEl.appendChild(removeBtn);
+                        serviceListEl.appendChild(songEl);
+                    });
+                }
+            }
+        }
+
+
         async function addToService(songId) {
             if (!currentUser || currentUser.email !== 'simsonpeter@gmail.com') {
                 alert('Only admin can manage service songs');
@@ -2864,7 +2937,7 @@
                     addedBy: currentUser.uid
                 });
 
-                await loadServiceSongs();
+                // Real-time listener will update UI automatically
                 alert(`Added "${song.songTitle}" to service`);
             } catch (error) {
                 console.error('Error adding to service:', error);
@@ -2880,7 +2953,9 @@
 
             try {
                 await db.collection('serviceSongs').doc(songId).delete();
-                await loadServiceSongs();
+
+                // Wait a moment for the listener to update serviceSongs array
+                await new Promise(resolve => setTimeout(resolve, 100));
 
                 // Reorder remaining songs
                 const batch = db.batch();
@@ -2890,6 +2965,7 @@
                 });
                 await batch.commit();
 
+                // Real-time listener will update UI automatically
                 alert('Removed from service');
             } catch (error) {
                 console.error('Error removing from service:', error);
@@ -3179,7 +3255,7 @@
                     }
 
                     await addToService(songId);
-                    updateServiceManagementUI();
+                    // Real-time listener will update UI automatically
                     serviceSongSelect.value = '';
                 });
             }
@@ -3194,8 +3270,7 @@
                             batch.delete(db.collection('serviceSongs').doc(song.id));
                         });
                         await batch.commit();
-                        await loadServiceSongs();
-                        updateServiceManagementUI();
+                        // Real-time listener will update UI automatically
                         alert('All service songs cleared');
                     } catch (error) {
                         console.error('Error clearing service songs:', error);
@@ -3204,61 +3279,16 @@
                 });
             }
 
-            // Update service management UI
-            function updateServiceManagementUI() {
-                const serviceCountEl = document.getElementById('service-count');
-                const serviceListEl = document.getElementById('service-songs-list');
-
-                if (serviceCountEl) {
-                    serviceCountEl.textContent = serviceSongs.length;
-                }
-
-                if (serviceListEl) {
-                    if (serviceSongs.length === 0) {
-                        serviceListEl.innerHTML = '<div class="no-songs">No songs added yet</div>';
-                    } else {
-                        serviceListEl.innerHTML = '';
-                        serviceSongs.forEach((serviceSong, index) => {
-                            const song = songs.find(s => s.id === serviceSong.id);
-                            if (!song) return;
-
-                            const songEl = document.createElement('div');
-                            songEl.className = 'song-index-item';
-                            songEl.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
-
-                            const titleSpan = document.createElement('span');
-                            titleSpan.textContent = `${index + 1}. ${song.songTitle}`;
-
-                            const removeBtn = document.createElement('button');
-                            removeBtn.className = 'accent';
-                            removeBtn.style.cssText = 'padding: 5px 10px; font-size: 12px;';
-                            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
-                            removeBtn.onclick = async () => {
-                                await removeFromService(serviceSong.id);
-                                updateServiceManagementUI();
-                            };
-
-                            songEl.appendChild(titleSpan);
-                            songEl.appendChild(removeBtn);
-                            serviceListEl.appendChild(songEl);
-                        });
-                    }
-                }
-
-                // Populate song select
-                if (serviceSongSelect && songs.length > 0) {
-                    serviceSongSelect.innerHTML = '<option value="">-- Select a song --</option>';
-                    songs.forEach(song => {
-                        const option = document.createElement('option');
-                        option.value = song.id;
-                        option.textContent = song.songTitle;
-                        serviceSongSelect.appendChild(option);
-                    });
-                }
+            // Populate song select
+            if (serviceSongSelect && songs.length > 0) {
+                serviceSongSelect.innerHTML = '<option value="">-- Select a song --</option>';
+                songs.forEach(song => {
+                    const option = document.createElement('option');
+                    option.value = song.id;
+                    option.textContent = song.songTitle;
+                    serviceSongSelect.appendChild(option);
+                });
             }
-
-            // Initial update
-            updateServiceManagementUI();
         };
     </script>
 </body>
