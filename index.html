@@ -1193,12 +1193,12 @@
         // Initialize Tamil alphabet index based on available songs
         function initAlphabetIndex(containerId) {
             const container = document.getElementById(containerId);
-            
+
             // If container doesn't exist, the view is not active, so skip initialization
             if (!container) {
                 return;
             }
-            
+
             container.innerHTML = '';
 
             // Add All option
@@ -1652,6 +1652,10 @@
 
             // Load songs and set default tab
             loadSongs();
+
+            // Load favorites (from Firestore if logged in, localStorage if guest)
+            loadFavorites();
+
             switchTab('songs');
         });
 
@@ -2336,6 +2340,12 @@
 
                 console.log(`Synced ${newSongs.length} songs`);
 
+                // Sync favorites for logged-in users
+                if (currentUser) {
+                    await loadFavorites();
+                    console.log('Favorites synced');
+                }
+
                 // Show success message
                 showSyncMessage('Sync complete!', false);
 
@@ -2761,15 +2771,66 @@
             }
         }
 
-        function saveFavorites() {
+        async function saveFavorites() {
+            // Always save to localStorage as backup
             localStorage.setItem('songbook-favorites', JSON.stringify([...favorites]));
+
+            // If user is logged in, sync to Firestore
+            if (currentUser) {
+                try {
+                    const batch = db.batch();
+                    const favoritesRef = db.collection('users').doc(currentUser.uid).collection('favorites');
+
+                    // Get current favorites from Firestore
+                    const snapshot = await favoritesRef.get();
+                    const firestoreFavorites = new Set(snapshot.docs.map(doc => doc.id));
+
+                    // Add new favorites
+                    favorites.forEach(songId => {
+                        if (!firestoreFavorites.has(songId)) {
+                            batch.set(favoritesRef.doc(songId), {
+                                favoritedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        }
+                    });
+
+                    // Remove unfavorited songs
+                    firestoreFavorites.forEach(songId => {
+                        if (!favorites.has(songId)) {
+                            batch.delete(favoritesRef.doc(songId));
+                        }
+                    });
+
+                    await batch.commit();
+                    console.log('Favorites synced to Firestore');
+                } catch (error) {
+                    console.error('Error syncing favorites to Firestore:', error);
+                }
+            }
         }
 
-        function loadFavorites() {
+        async function loadFavorites() {
             try {
+                // If user is logged in, load from Firestore
+                if (currentUser) {
+                    try {
+                        const snapshot = await db.collection('users').doc(currentUser.uid).collection('favorites').get();
+                        favorites = new Set(snapshot.docs.map(doc => doc.id));
+                        console.log(`Loaded ${favorites.size} favorites from Firestore`);
+
+                        // Also save to localStorage as backup
+                        localStorage.setItem('songbook-favorites', JSON.stringify([...favorites]));
+                        return;
+                    } catch (error) {
+                        console.error('Error loading favorites from Firestore:', error);
+                    }
+                }
+
+                // Fallback to localStorage (for guests or if Firestore fails)
                 const saved = localStorage.getItem('songbook-favorites');
                 if (saved) {
                     favorites = new Set(JSON.parse(saved));
+                    console.log(`Loaded ${favorites.size} favorites from localStorage`);
                 }
             } catch (error) {
                 console.error('Error loading favorites:', error);
