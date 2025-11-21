@@ -2748,7 +2748,7 @@
         }
 
         // Favorite management functions
-        function toggleFavorite(songId) {
+        async function toggleFavorite(songId) {
             const btn = document.getElementById(`favorite-btn-${songId}`);
             if (favorites.has(songId)) {
                 favorites.delete(songId);
@@ -2759,7 +2759,7 @@
                 btn.classList.add('active');
                 btn.innerHTML = '<i class="fas fa-star"></i>';
             }
-            saveFavorites();
+            await saveFavorites();
             // Update favorite count in profile if visible
             const favoriteCountEl = document.getElementById('favorite-count');
             if (favoriteCountEl) {
