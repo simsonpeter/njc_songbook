@@ -1287,13 +1287,17 @@
             filteredSongs.sort((a, b) => a.songTitle.localeCompare(b.songTitle, 'ta'));
 
             if (filteredSongs.length === 0) {
-                parentContainer.innerHTML = '<div class="no-songs">No songs found. Try a different letter or search term.</div>';
+                if (parentContainer) {
+                    parentContainer.innerHTML = '<div class="no-songs">No songs found. Try a different letter or search term.</div>';
+                }
                 return;
             }
 
             // Create new container if needed
             if (!container) {
-                parentContainer.innerHTML = '<div class="song-index" id="' + containerId + '"></div>';
+                if (parentContainer) {
+                    parentContainer.innerHTML = '<div class="song-index" id="' + containerId + '"></div>';
+                }
             }
 
             const targetContainer = container || document.getElementById(containerId);
