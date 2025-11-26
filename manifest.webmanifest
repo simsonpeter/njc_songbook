@@ -1,0 +1,11 @@
+{
+  "name": "NJC Song Book",
+  "short_name": "SongBook",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3e5f5",
+  "theme_color": "#4a148c",
+  "description": "Tamil song lyrics with offline browsing.",
+  "scope": "/"
+}
+
