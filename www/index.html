@@ -1291,7 +1291,9 @@
         let isInitialized = false;
         let isSyncing = false;
         let currentTab = 'songs';
+        let currentView = 'songs'; // Track current view: 'songs', 'service', 'favorites', 'admin'
         let favorites = new Map(); // Store favorite song IDs with timestamps
+        let navigationHistory = []; // Global navigation history stack
         let pullToRefresh = {
             startY: 0,
             currentY: 0,
@@ -1439,6 +1441,43 @@
             });
         }
 
+        // Navigation History Management
+        function pushNavigationState(state) {
+            // Don't push duplicate consecutive states
+            const lastState = navigationHistory[navigationHistory.length - 1];
+            if (lastState &&
+                lastState.type === state.type &&
+                lastState.tab === state.tab &&
+                lastState.songId === state.songId) {
+                return;
+            }
+            navigationHistory.push({
+                ...state,
+                timestamp: Date.now()
+            });
+            console.log('Navigation pushed:', state, 'Stack size:', navigationHistory.length);
+        }
+
+        function popNavigationState() {
+            if (navigationHistory.length > 0) {
+                const state = navigationHistory.pop();
+                console.log('Navigation popped:', state, 'Stack size:', navigationHistory.length);
+                return state;
+            }
+            return null;
+        }
+
+        function getPreviousNavigationState() {
+            if (navigationHistory.length > 1) {
+                // Return the second-to-last state (the one before current)
+                return navigationHistory[navigationHistory.length - 2];
+            } else if (navigationHistory.length === 1) {
+                // If only one state, return null to exit app
+                return null;
+            }
+            return null;
+        }
+
         // View lyric detail
         async function viewLyric(lyricId) {
             try {
@@ -1509,6 +1548,14 @@
                             <div class="lyric-text">${lyric.lyricsText}</div>
                             ${adminControlsHTML}
                         `;
+
+                // Push navigation state for viewing this song
+                pushNavigationState({
+                    type: 'song',
+                    tab: currentTab,
+                    view: currentView,
+                    songId: lyricId
+                });
 
                 viewerContent.classList.add('hidden');
                 adminControls.classList.add('hidden');
@@ -2559,6 +2606,12 @@
         function switchTab(tab) {
             currentTab = tab;
 
+            // Push navigation state for tab switch
+            pushNavigationState({
+                type: 'tab',
+                tab: tab
+            });
+
             // Update active nav item
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
@@ -2691,6 +2744,7 @@
 
         // Show songs view
         function showSongsView() {
+            currentView = 'songs';
             const viewerContent = document.getElementById('viewer-content');
             viewerContent.innerHTML = `
                 <div class="search-bar">
@@ -2790,6 +2844,7 @@
 
         // Show favorites
         function showFavorites() {
+            currentView = 'favorites';
             const viewerContent = document.getElementById('viewer-content');
 
             if (favorites.size === 0) {
@@ -2906,6 +2961,7 @@
         }
 
         function showService() {
+            currentView = 'service';
             const viewerContent = document.getElementById('viewer-content');
 
             if (serviceSongs.length === 0) {
@@ -3377,6 +3433,81 @@
                 });
             }
         };
+    </script>
+    <script>
+        // Back button handling with navigation history
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if Capacitor is available
+            if (window.Capacitor) {
+                const App = Capacitor.Plugins.App;
+
+                if (App) {
+                    App.addListener('backButton', ({ canGoBack }) => {
+                        console.log('Back button pressed, history length:', navigationHistory.length);
+
+                        // Pop current state
+                        const currentState = popNavigationState();
+
+                        // Get previous state
+                        const previousState = getPreviousNavigationState();
+
+                        if (previousState) {
+                            console.log('Navigating to previous state:', previousState);
+
+                            // Restore previous state
+                            if (previousState.type === 'song') {
+                                // Navigate to the previous song
+                                viewLyric(previousState.songId);
+                            } else if (previousState.type === 'tab') {
+                                // Navigate to the previous tab
+                                // We need to switch without pushing to history again
+                                currentTab = previousState.tab;
+
+                                // Update UI without pushing to history
+                                document.querySelectorAll('.nav-item').forEach(item => {
+                                    item.classList.remove('active');
+                                });
+                                document.querySelector(`[data-tab="${previousState.tab}"]`).classList.add('active');
+
+                                // Hide all content
+                                document.getElementById('admin-controls').classList.add('hidden');
+                                document.getElementById('viewer-content').classList.add('hidden');
+                                document.getElementById('lyric-detail-view').classList.add('hidden');
+
+                                // Show appropriate content based on tab
+                                if (previousState.tab === 'admin' && currentUser && currentUser.email === 'simsonpeter@gmail.com') {
+                                    document.getElementById('admin-controls').classList.remove('hidden');
+                                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                                    document.querySelector('.tab[data-tab="song-index"]').classList.add('active');
+                                    document.getElementById('song-index').classList.add('active');
+                                } else {
+                                    // Restore the specific view based on previousState.view
+                                    if (previousState.view === 'service') {
+                                        showService();
+                                    } else if (previousState.view === 'favorites') {
+                                        showFavorites();
+                                    } else if (previousState.view === 'songs') {
+                                        showSongsView();
+                                    } else if (previousState.tab === 'about') {
+                                        showAboutView();
+                                    } else if (previousState.tab === 'profile') {
+                                        showProfile();
+                                    } else {
+                                        // Default to songs view
+                                        showSongsView();
+                                    }
+                                }
+                            }
+                        } else {
+                            // No more history, exit app
+                            console.log('No more history, exiting app');
+                            App.exitApp();
+                        }
+                    });
+                }
+            }
+        });
     </script>
 </body>
 

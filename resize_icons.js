@@ -12,6 +12,10 @@ const sizes = {
 };
 
 async function createIcons() {
+    // Get logo dimensions
+    const metadata = await sharp('logo.png').metadata();
+    console.log(`Logo dimensions: ${metadata.width}x${metadata.height}`);
+
     for (const [folder, size] of Object.entries(sizes)) {
         const outputDir = path.join('android', 'app', 'src', 'main', 'res', folder);
 
@@ -20,14 +24,20 @@ async function createIcons() {
             fs.mkdirSync(outputDir, { recursive: true });
         }
 
-        // Create ic_launcher.png
+        // Create ic_launcher.png with contain fit (adds padding to maintain aspect ratio)
         await sharp('logo.png')
-            .resize(size, size)
+            .resize(size, size, {
+                fit: 'contain',
+                background: { r: 255, g: 255, b: 255, alpha: 0 } // Transparent background
+            })
             .toFile(path.join(outputDir, 'ic_launcher.png'));
 
-        // Create ic_launcher_round.png
+        // Create ic_launcher_round.png with contain fit
         await sharp('logo.png')
-            .resize(size, size)
+            .resize(size, size, {
+                fit: 'contain',
+                background: { r: 255, g: 255, b: 255, alpha: 0 } // Transparent background
+            })
             .toFile(path.join(outputDir, 'ic_launcher_round.png'));
 
         console.log(`Created ${folder} icons (${size}x${size})`);
