@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tamil to Simple Romanized Tamil Converter</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #b21f1f, #e53e3e);
+            color: #333;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+            color: #222;
+        }
+        h1 {
+            text-align: center;
+            color: #b21f1f;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        textarea {
+            width: 100%;
+            height: 180px;
+            padding: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: 'Noto Sans Tamil', 'Arial Unicode MS', sans-serif;
+            resize: vertical;
+            margin-bottom: 15px;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #b21f1f;
+            box-shadow: 0 0 0 3px rgba(178, 31, 31, 0.15);
+        }
+        .btn-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button {
+            background: linear-gradient(135deg, #b21f1f, #e53e3e);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 24px;
+            cursor: pointer;
+            font-size: 15px;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+        .copy-btn {
+            background: #48bb78 !important;
+        }
+        .copy-btn:hover {
+            background: #38a169 !important;
+        }
+        .clear-btn {
+            background: #e53e3e !important;
+        }
+        .clear-btn:hover {
+            background: #c53030 !important;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            font-size: 14px;
+            color: #666;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .example {
+            background: #fff0f0;
+            padding: 18px;
+            border-left: 4px solid #b21f1f;
+            border-radius: 8px;
+            margin: 25px 0;
+        }
+        .example h3 {
+            margin: 0 0 10px 0;
+            color: #b21f1f;
+        }
+        .example p {
+            margin: 5px 0;
+            font-family: 'Noto Sans Tamil', monospace;
+            font-size: 17px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #aaa;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Tamil to Simple Romanized Tamil Converter</h1>
+        
+        <div class="input-section">
+            <label for="tamilInput"><strong>Enter Tamil Text:</strong></label>
+            <textarea id="tamilInput" placeholder="நீங்கள் தமிழில் எழுதுங்கள்... எ.கா. வணக்கம், இயேசு உங்களுடன் இருக்கிறார்.">வணக்கம்,
+இயேசு உங்களுடன் இருக்கிறார்.
+சமாதானம் தரும் தேவன்,
+உங்கள் இதயத்தில் அமைதி நிலைக்கட்டும்.</textarea>
+        </div>
+
+        <div class="stats">
+            <span>Characters: <span id="charCount">0</span></span>
+            <span>Words: <span id="wordCount">0</span></span>
+            <span>Lines: <span id="lineCount">0</span></span>
+        </div>
+
+        <div class="btn-container">
+            <button onclick="convertTamil()">Convert to Romanized</button>
+            <button class="clear-btn" onclick="clearAll()">Clear All</button>
+        </div>
+
+        <div class="output-section">
+            <label for="romanizedOutput"><strong>Romanized Tamil Output:</strong></label>
+            <textarea id="romanizedOutput" readonly></textarea>
+            <div class="btn-container">
+                <button class="copy-btn" onclick="copyToClipboard()">Copy to Clipboard</button>
+            </div>
+        </div>
+
+        <div class="example">
+            <h3>Examples (Ministry-Standard Romanization)</h3>
+            <p>Tamil: வணக்கம்</p>
+            <p>Romanized: vanakkam</p>
+            
+            <p>Tamil: இயேசு</p>
+            <p>Romanized: iyesu</p>
+            
+            <p>Tamil: சமாதானம்</p>
+            <p>Romanized: samaathaanam</p>
+            
+            <p>Tamil: சாந்தி</p>
+            <p>Romanized: saanthi</p>
+            
+            <p>Tamil: செவிலியர்</p>
+            <p>Romanized: seviliyar</p>
+        </div>
+    </div>
+
+    <div class="footer">Built for Levi Group & Pastor Romilton's Ministry — Optimized for Mobile & Web Apps</div>
+
+    <script>
+        const tamilToRomanized = {
+            // Vowels
+            'அ': 'a', 'ஆ': 'aa', 'இ': 'i', 'ஈ': 'ii', 'உ': 'u', 'ஊ': 'uu',
+            'எ': 'e', 'ஏ': 'ee', 'ஐ': 'ai', 'ஒ': 'o', 'ஓ': 'oo', 'ஔ': 'au',
+            
+            // Consonants with pulli (்)
+            'க்': 'k', 'ங்': 'ng', 'ச்': 's', 'ஜ்': 'j', 'ஞ்': 'ny',
+            'ட்': 't', 'ண்': 'n', 'த்': 't', 'ந்': 'n', 'ப்': 'p',
+            'ம்': 'm', 'ய்': 'y', 'ர்': 'r', 'ல்': 'l', 'வ்': 'v',
+            'ழ்': 'l', 'ள்': 'l', 'ற்': 'r', 'ன்': 'n', 'ஸ்': 's',
+            'ஹ்': 'h', 'ஶ்': 'sh', 'ஷ்': 'sh',
+            
+            // Base consonants (with inherent 'a')
+            'க': 'ka', 'ங': 'nga', 'ச': 'sa', 'ஜ': 'ja', 'ஞ': 'nya',
+            'ட': 'ta', 'ண': 'na', 'த': 'ta', 'ந': 'na', 'ப': 'pa',
+            'ம': 'ma', 'ய': 'ya', 'ர': 'ra', 'ல': 'la', 'வ': 'va',
+            'ழ': 'la', 'ள': 'l', 'ற': 'ra', 'ன': 'na', 'ஸ': 'sa',
+            'ஹ': 'ha', 'ஶ': 'sh', 'ஷ': 'sh',
+            
+            // Vowel combinations
+            'கா': 'kaa', 'கி': 'ki', 'கீ': 'kii', 'கு': 'ku', 'கூ': 'kuu',
+            'கெ': 'ke', 'கே': 'kee', 'கை': 'kai', 'கொ': 'ko', 'கோ': 'koo', 'கௌ': 'kau',
+            
+            'ஙா': 'ngaa', 'ஙி': 'ngi', 'ஙீ': 'ngii', 'ஙு': 'ngu', 'ஙூ': 'nguu',
+            'ஙெ': 'nge', 'ஙே': 'ngee', 'ஙை': 'ngai', 'ஙொ': 'ngo', 'ஙோ': 'ngoo', 'ஙௌ': 'ngau',
+            
+            'சா': 'saa', 'சி': 'si', 'சீ': 'sii', 'சு': 'su', 'சூ': 'suu',
+            'செ': 'se', 'சே': 'see', 'சை': 'sai', 'சொ': 'so', 'சோ': 'soo', 'சௌ': 'sau',
+            
+            'ஜா': 'jaa', 'ஜி': 'ji', 'ஜீ': 'jii', 'ஜு': 'ju', 'ஜூ': 'juu',
+            'ஜெ': 'je', 'ஜே': 'jee', 'ஜை': 'jai', 'ஜொ': 'jo', 'ஜோ': 'joo', 'ஜௌ': 'jau',
+            
+            'டா': 'taa', 'டி': 'ti', 'டீ': 'tii', 'டு': 'tu', 'டூ': 'tuu',
+            'டெ': 'te', 'டே': 'tee', 'டை': 'tai', 'டொ': 'to', 'டோ': 'too', 'டௌ': 'tau',
+            
+            'ணா': 'naa', 'ணி': 'ni', 'ணீ': 'nii', 'ணு': 'nu', 'ணூ': 'nuu',
+            'ணெ': 'ne', 'ணே': 'nee', 'ணை': 'nai', 'ணொ': 'no', 'ணோ': 'noo', 'ணௌ': 'nau',
+            
+            'தா': 'taa', 'தி': 'ti', 'தீ': 'tii', 'து': 'tu', 'தூ': 'tuu',
+            'தெ': 'te', 'தே': 'tee', 'தை': 'tai', 'தொ': 'to', 'தோ': 'too', 'தௌ': 'tau',
+            
+            'நா': 'naa', 'நி': 'ni', 'நீ': 'nii', 'நு': 'nu', 'நூ': 'nuu',
+            'நெ': 'ne', 'நே': 'nee', 'நை': 'nai', 'நொ': 'no', 'நோ': 'noo', 'நௌ': 'nau',
+            
+            'பா': 'paa', 'பி': 'pi', 'பீ': 'pii', 'பு': 'pu', 'பூ': 'puu',
+            'பெ': 'pe', 'பே': 'pee', 'பை': 'pai', 'பொ': 'po', 'போ': 'poo', 'பௌ': 'pau',
+            
+            'மா': 'maa', 'மி': 'mi', 'மீ': 'mii', 'மு': 'mu', 'மூ': 'muu',
+            'மெ': 'me', 'மே': 'mee', 'மை': 'mai', 'மொ': 'mo', 'மோ': 'moo', 'மௌ': 'mau',
+            
+            'யா': 'yaa', 'யி': 'yi', 'யீ': 'yii', 'யு': 'yu', 'யூ': 'yuu',
+            'யெ': 'ye', 'யே': 'yee', 'யை': 'yai', 'யொ': 'yo', 'யோ': 'yoo', 'யௌ': 'yau',
+            
+            'ரா': 'raa', 'ரி': 'ri', 'ரீ': 'rii', 'ரு': 'ru', 'ரூ': 'ruu',
+            'ரெ': 're', 'ரே': 'ree', 'ரை': 'rai', 'ரொ': 'ro', 'ரோ': 'roo', 'ரௌ': 'rau',
+            
+            'லா': 'laa', 'லி': 'li', 'லீ': 'lii', 'லு': 'lu', 'லூ': 'luu',
+            'லெ': 'le', 'லே': 'lee', 'லை': 'lai', 'லொ': 'lo', 'லோ': 'loo', 'லௌ': 'lau',
+            
+            'வா': 'vaa', 'வி': 'vi', 'வீ': 'vii', 'வு': 'vu', 'வூ': 'vuu',
+            'வெ': 've', 'வே': 'vee', 'வை': 'vai', 'வொ': 'vo', 'வோ': 'voo', 'வௌ': 'vau',
+            
+            'ழா': 'laa', 'ழி': 'li', 'ழீ': 'lii', 'ழு': 'lu', 'ழூ': 'luu',
+            'ழெ': 'le', 'ழே': 'lee', 'ழை': 'lai', 'ழொ': 'lo', 'ழோ': 'loo', 'ழௌ': 'lau',
+            
+            'ளா': 'laa', 'ளி': 'li', 'ளீ': 'lii', 'ளு': 'lu', 'ளூ': 'luu',
+            'ளெ': 'le', 'ளே': 'lee', 'ளை': 'lai', 'ளொ': 'lo', 'ளோ': 'loo', 'ளௌ': 'lau',
+            
+            'றா': 'raa', 'றி': 'ri', 'றீ': 'rii', 'று': 'ru', 'றூ': 'ruu',
+            'றெ': 're', 'றே': 'ree', 'றை': 'rai', 'றொ': 'ro', 'றோ': 'roo', 'றௌ': 'rau',
+            
+            'னா': 'naa', 'னி': 'ni', 'னீ': 'nii', 'னு': 'nu', 'னூ': 'nuu',
+            'னெ': 'ne', 'னே': 'nee', 'னை': 'nai', 'னொ': 'no', 'னோ': 'noo', 'னௌ': 'nau',
+            
+            'ஸா': 'saa', 'ஸி': 'si', 'ஸீ': 'sii', 'ஸு': 'su', 'ஸூ': 'suu',
+            'ஸெ': 'se', 'ஸே': 'see', 'ஸை': 'sai', 'ஸொ': 'so', 'ஸோ': 'soo', 'ஸௌ': 'sau',
+            
+            'ஹா': 'haa', 'ஹி': 'hi', 'ஹீ': 'hii', 'ஹு': 'hu', 'ஹூ': 'huu',
+            'ஹெ': 'he', 'ஹே': 'hee', 'ஹை': 'hai', 'ஹொ': 'ho', 'ஹோ': 'hoo', 'ஹௌ': 'hau',
+            
+            'ஶா': 'shaa', 'ஶி': 'shi', 'ஶீ': 'shii', 'ஶு': 'shu', 'ஶூ': 'shuu',
+            'ஶெ': 'she', 'ஶே': 'shee', 'ஶை': 'shai', 'ஶொ': 'sho', 'ஶோ': 'shoo', 'ஶௌ': 'shau',
+            
+            'ஷா': 'shaa', 'ஷி': 'shi', 'ஷீ': 'shii', 'ஷு': 'shu', 'ஷூ': 'shuu',
+            'ஷெ': 'she', 'ஷே': 'shee', 'ஷை': 'shai', 'ஷொ': 'sho', 'ஷோ': 'shoo', 'ஷௌ': 'shau',
+            
+            '௦': '0', '௧': '1', '௨': '2', '௩': '3', '௪': '4',
+            '௫': '5', '௬': '6', '௭': '7', '௮': '8', '௯': '9',
+            
+            ' ': ' ', '.': '.', ',': ',', '?': '?', '!': '!', ':': ':', ';': ';',
+            '(': '(', ')': ')', '-': '-', '–': '-', '—': '-', '"': '"', "'": "'",
+            'ஃ': 'h'
+        };
+
+        function convertTamil() {
+            const input = document.getElementById('tamilInput').value;
+            let output = '';
+
+            for (let i = 0; i < input.length; i++) {
+                const char = input[i];
+                const nextChar = i + 1 < input.length ? input[i + 1] : '';
+                const twoChars = char + nextChar;
+
+                if (tamilToRomanized[twoChars]) {
+                    output += tamilToRomanized[twoChars];
+                    i++; // Skip next character
+                } else if (tamilToRomanized[char]) {
+                    output += tamilToRomanized[char];
+                } else {
+                    output += char; // Preserve everything else (spaces, line breaks, punctuation)
+                }
+            }
+
+            document.getElementById('romanizedOutput').value = output;
+            updateStats();
+        }
+
+        function clearAll() {
+            document.getElementById('tamilInput').value = '';
+            document.getElementById('romanizedOutput').value = '';
+            updateStats();
+        }
+
+        function copyToClipboard() {
+            const output = document.getElementById('romanizedOutput');
+            output.select();
+            document.execCommand('copy');
+            const btn = document.querySelector('.copy-btn');
+            const original = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = original, 2000);
+        }
+
+        function updateStats() {
+            const input = document.getElementById('tamilInput').value;
+            document.getElementById('charCount').textContent = input.length;
+            document.getElementById('wordCount').textContent = input.trim() ? input.trim().split(/\s+/).length : 0;
+            document.getElementById('lineCount').textContent = input ? input.split('\n').length : 0;
+        }
+
+        document.getElementById('tamilInput').addEventListener('input', updateStats);
+        updateStats();
+    </script>
+</body>
+</html>
