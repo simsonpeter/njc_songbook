@@ -3029,7 +3029,6 @@
                 return text;
             }
             
-            // ITRANS-based transliteration mapping
             // Base consonants (without inherent vowel)
             const consonants = {
                 'க': 'k', 'ங': 'ng', 'ச': 'ch', 'ஞ': 'nj', 'ட': 't', 'ண': 'n',
@@ -3050,45 +3049,6 @@
                 'ெ': 'e', 'ே': 'ee', 'ை': 'ai', 'ொ': 'o', 'ோ': 'oo', 'ௌ': 'au'
             };
             
-            // Build comprehensive map for all Tamil Unicode characters (0x0B95-0x0BCD)
-            // Tamil Unicode structure: Each consonant has 12 vowel forms
-            const tamilMap = {};
-            
-            // Add standalone vowels
-            Object.assign(tamilMap, vowels);
-            
-            // Generate all consonant-vowel combinations
-            const vowelNames = ['a', 'aa', 'i', 'ii', 'u', 'uu', 'e', 'ee', 'ai', 'o', 'oo', 'au'];
-            const consonantKeys = Object.keys(consonants);
-            
-            // Map all precomposed Tamil characters (Unicode 0x0B95-0x0BCD)
-            for (let baseCode = 0x0B95; baseCode <= 0x0BB9; baseCode++) {
-                const baseChar = String.fromCharCode(baseCode);
-                const consIndex = consonantKeys.indexOf(baseChar);
-                
-                if (consIndex >= 0) {
-                    const consName = consonants[baseChar];
-                    // Each consonant has 12 vowel forms
-                    for (let v = 0; v < 12; v++) {
-                        const charCode = baseCode + v;
-                        if (charCode <= 0x0BCD) {
-                            const char = String.fromCharCode(charCode);
-                            tamilMap[char] = consName + vowelNames[v];
-                        }
-                    }
-                }
-            }
-            
-            // Add remaining consonants with 'a'
-            Object.keys(consonants).forEach(cons => {
-                if (!tamilMap[cons]) {
-                    tamilMap[cons] = consonants[cons] + 'a';
-                }
-            });
-            
-            // Special characters
-            tamilMap['ஃ'] = 'ah';
-            
             let result = '';
             let i = 0;
             
@@ -3096,6 +3056,7 @@
                 const char = text[i];
                 const nextChar = text[i + 1];
                 const charAfterNext = text[i + 2];
+                const charCode = char.charCodeAt(0);
                 
                 // Preserve whitespace and newlines
                 if (/\s/.test(char)) {
@@ -3110,11 +3071,40 @@
                     continue;
                 }
                 
-                // Check precomposed character mapping first
-                if (tamilMap[char]) {
-                    result += tamilMap[char];
+                // Handle standalone vowels
+                if (vowels[char]) {
+                    result += vowels[char];
                     i++;
                     continue;
+                }
+                
+                // Handle special character
+                if (char === 'ஃ') {
+                    result += 'ah';
+                    i++;
+                    continue;
+                }
+                
+                // Handle precomposed Tamil characters (Unicode 0x0B95-0x0BCD)
+                // Tamil Unicode: Each consonant base has 12 vowel forms
+                // The structure is: base + (0-11) for each vowel
+                if (charCode >= 0x0B95 && charCode <= 0x0BCD) {
+                    // Calculate which consonant and vowel
+                    const baseOffset = charCode - 0x0B95;
+                    const consonantIndex = Math.floor(baseOffset / 12);
+                    const vowelIndex = baseOffset % 12;
+                    
+                    const consonantList = ['க', 'ங', 'ச', 'ஞ', 'ட', 'ண', 'த', 'ந', 'ப', 'ம', 'ய', 'ர', 'ல', 'வ', 'ழ', 'ள', 'ற', 'ன', 'ஷ', 'ஸ', 'ஜ', 'ஹ'];
+                    const vowelNames = ['a', 'aa', 'i', 'ii', 'u', 'uu', 'e', 'ee', 'ai', 'o', 'oo', 'au'];
+                    
+                    if (consonantIndex < consonantList.length && vowelIndex < vowelNames.length) {
+                        const baseCons = consonantList[consonantIndex];
+                        if (consonants[baseCons]) {
+                            result += consonants[baseCons] + vowelNames[vowelIndex];
+                            i++;
+                            continue;
+                        }
+                    }
                 }
                 
                 // Handle base consonant + vowel diacritic
