@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NJC Song Book</string>
+    <string name="title_activity_main">NJC Song Book</string>
+    <string name="package_name">com.njc.songbook</string>
+    <string name="custom_url_scheme">com.njc.songbook</string>
+</resources>

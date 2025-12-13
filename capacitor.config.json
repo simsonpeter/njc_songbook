@@ -1,0 +1,6 @@
+{
+  "appId": "com.njc.songbook",
+  "appName": "NJC Song Book",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}
