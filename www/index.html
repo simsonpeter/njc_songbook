@@ -3027,25 +3027,36 @@
             // Check if text contains Tamil characters (Unicode range \u0B80-\u0BFF)
             const tamilRegex = /[\u0B80-\u0BFF]/;
             if (!tamilRegex.test(text)) {
-                // Already in English/Romanized, return as is
                 return text;
             }
             
-            // Comprehensive Tamil to Romanized mapping
-            const tamilMap = {
-                // Vowels
+            // Consonant base names (for Unicode 0x0B95-0x0BB9 range)
+            const consonantBases = [
+                'k', 'ng', 'ch', 'nj', 't', 'n', 'th', 'n', 'p', 'm', 'y', 'r',
+                'l', 'v', 'zh', 'l', 'r', 'n', 'sh', 's', 'j', 'h'
+            ];
+            
+            // Vowel names (12 vowels per consonant)
+            const vowelNames = ['a', 'aa', 'i', 'ii', 'u', 'uu', 'e', 'ee', 'ai', 'o', 'oo', 'au'];
+            
+            // Standalone vowels
+            const standaloneVowels = {
                 'அ': 'a', 'ஆ': 'aa', 'இ': 'i', 'ஈ': 'ii', 'உ': 'u', 'ஊ': 'uu',
-                'எ': 'e', 'ஏ': 'ee', 'ஐ': 'ai', 'ஒ': 'o', 'ஓ': 'oo', 'ஔ': 'au',
-                // Consonants with inherent 'a'
-                'க': 'ka', 'ங': 'nga', 'ச': 'sa', 'ஞ': 'nya', 'ட': 'ta', 'ண': 'na',
-                'த': 'tha', 'ந': 'na', 'ப': 'pa', 'ம': 'ma', 'ய': 'ya', 'ர': 'ra',
-                'ல': 'la', 'வ': 'va', 'ழ': 'zha', 'ள': 'la', 'ற': 'ra', 'ன': 'na',
-                'ஷ': 'sha', 'ஸ': 'sa', 'ஜ': 'ja', 'ஹ': 'ha', 'க்ஷ': 'ksha',
-                // Vowel markers (diacritics)
+                'எ': 'e', 'ஏ': 'ee', 'ஐ': 'ai', 'ஒ': 'o', 'ஓ': 'oo', 'ஔ': 'au'
+            };
+            
+            // Vowel diacritics (combining marks that come after consonants)
+            const vowelDiacritics = {
                 'ா': 'aa', 'ி': 'i', 'ீ': 'ii', 'ு': 'u', 'ூ': 'uu',
-                'ெ': 'e', 'ே': 'ee', 'ை': 'ai', 'ொ': 'o', 'ோ': 'oo', 'ௌ': 'au',
-                '்': '', // Pulli (virama - removes inherent vowel)
-                'ஃ': 'ah'
+                'ெ': 'e', 'ே': 'ee', 'ை': 'ai', 'ொ': 'o', 'ோ': 'oo', 'ௌ': 'au'
+            };
+            
+            // Base consonants (for handling with diacritics)
+            const baseConsonants = {
+                'க': 'k', 'ங': 'ng', 'ச': 'ch', 'ஞ': 'nj', 'ட': 't', 'ண': 'n',
+                'த': 'th', 'ந': 'n', 'ப': 'p', 'ம': 'm', 'ய': 'y', 'ர': 'r',
+                'ல': 'l', 'வ': 'v', 'ழ': 'zh', 'ள': 'l', 'ற': 'r', 'ன': 'n',
+                'ஷ': 'sh', 'ஸ': 's', 'ஜ': 'j', 'ஹ': 'h'
             };
             
             let result = '';
@@ -3053,42 +3064,99 @@
             
             while (i < text.length) {
                 const char = text[i];
+                const charCode = char.charCodeAt(0);
                 const nextChar = text[i + 1];
+                const charAfterNext = text[i + 2];
                 
-                // Check for multi-character sequences first (like க்ஷ)
-                if (i < text.length - 1 && char === 'க' && nextChar === '்ஷ') {
-                    result += 'ksha';
-                    i += 2;
+                // Handle standalone vowels
+                if (standaloneVowels[char]) {
+                    result += standaloneVowels[char];
+                    i++;
                     continue;
                 }
                 
-                // Check if character is in mapping
-                if (tamilMap[char]) {
-                    result += tamilMap[char];
-                } else if (tamilRegex.test(char)) {
-                    // Tamil character not in map - use a generic transliteration
-                    // For consonants, add 'a' sound
-                    const charCode = char.charCodeAt(0);
-                    if (charCode >= 0x0B95 && charCode <= 0x0BB9) {
-                        // Base consonants - map to approximate Romanized
-                        const consonantMap = {
-                            0x0B95: 'ka', 0x0B99: 'nga', 0x0B9A: 'cha', 0x0B9E: 'nya',
-                            0x0B9F: 'ta', 0x0BA3: 'na', 0x0BA4: 'tha', 0x0BA8: 'na',
-                            0x0BAA: 'pa', 0x0BAE: 'ma', 0x0BAF: 'ya', 0x0BB0: 'ra',
-                            0x0BB2: 'la', 0x0BB5: 'va', 0x0BB4: 'zha', 0x0BB3: 'la',
-                            0x0BB1: 'ra', 0x0BA9: 'na', 0x0BB7: 'sha', 0x0BB8: 'sa',
-                            0x0BB9: 'ha'
-                        };
-                        result += consonantMap[charCode] || char;
+                // Handle special characters
+                if (char === 'ஃ') {
+                    result += 'ah';
+                    i++;
+                    continue;
+                }
+                
+                // Handle precomposed consonant-vowel combinations (Unicode 0x0B95-0x0BCD)
+                if (charCode >= 0x0B95 && charCode <= 0x0BCD) {
+                    // Calculate which consonant and vowel
+                    if (charCode <= 0x0BB9) {
+                        // Regular consonant-vowel combinations
+                        const baseIndex = Math.floor((charCode - 0x0B95) / 12);
+                        const vowelIndex = (charCode - 0x0B95) % 12;
+                        
+                        if (baseIndex < consonantBases.length && vowelIndex < vowelNames.length) {
+                            result += consonantBases[baseIndex] + vowelNames[vowelIndex];
+                            i++;
+                            continue;
+                        }
+                    }
+                }
+                
+                // Handle base consonants with diacritics
+                if (baseConsonants[char]) {
+                    let consonant = baseConsonants[char];
+                    let vowel = 'a'; // Default inherent vowel
+                    let skip = 1;
+                    
+                    // Check for pulli (்) - removes inherent vowel
+                    if (nextChar === '்') {
+                        vowel = '';
+                        skip = 2;
+                        
+                        // Check for consonant clusters
+                        if (charAfterNext === 'ஷ' && char === 'க') {
+                            result += 'ksh';
+                            i += 3;
+                            continue;
+                        }
+                        if (charAfterNext && baseConsonants[charAfterNext]) {
+                            result += consonant;
+                            i += 2;
+                            continue;
+                        }
+                    } else if (nextChar && vowelDiacritics[nextChar]) {
+                        // Vowel diacritic follows
+                        vowel = vowelDiacritics[nextChar];
+                        skip = 2;
+                    }
+                    
+                    result += consonant + vowel;
+                    i += skip;
+                    continue;
+                }
+                
+                // Handle pulli alone (shouldn't happen, but just in case)
+                if (char === '்') {
+                    i++;
+                    continue;
+                }
+                
+                // Handle other Tamil characters or non-Tamil
+                if (tamilRegex.test(char)) {
+                    // Try base consonant mapping
+                    if (baseConsonants[char]) {
+                        result += baseConsonants[char] + 'a';
                     } else {
-                        result += char; // Keep unmapped Tamil characters
+                        result += char; // Keep unmapped characters
                     }
                 } else {
-                    // Non-Tamil character - keep as is
+                    // Non-Tamil - keep as is
                     result += char;
                 }
+                
                 i++;
             }
+            
+            // Post-processing: improve readability
+            result = result
+                .replace(/\s+/g, ' ') // Normalize spaces
+                .trim();
             
             return result;
         }
