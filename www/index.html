@@ -3086,25 +3086,59 @@
                 }
                 
                 // Handle precomposed Tamil characters (Unicode 0x0B95-0x0BCD)
-                // Tamil Unicode: Each consonant base has 12 vowel forms
-                // The structure is: base + (0-11) for each vowel
-                if (charCode >= 0x0B95 && charCode <= 0x0BCD) {
-                    // Calculate which consonant and vowel
-                    const baseOffset = charCode - 0x0B95;
-                    const consonantIndex = Math.floor(baseOffset / 12);
-                    const vowelIndex = baseOffset % 12;
-                    
-                    const consonantList = ['க', 'ங', 'ச', 'ஞ', 'ட', 'ண', 'த', 'ந', 'ப', 'ம', 'ய', 'ர', 'ல', 'வ', 'ழ', 'ள', 'ற', 'ன', 'ஷ', 'ஸ', 'ஜ', 'ஹ'];
-                    const vowelNames = ['a', 'aa', 'i', 'ii', 'u', 'uu', 'e', 'ee', 'ai', 'o', 'oo', 'au'];
-                    
-                    if (consonantIndex < consonantList.length && vowelIndex < vowelNames.length) {
-                        const baseCons = consonantList[consonantIndex];
-                        if (consonants[baseCons]) {
-                            result += consonants[baseCons] + vowelNames[vowelIndex];
-                            i++;
-                            continue;
+                // Tamil Unicode structure: consonants are NOT sequential
+                // We need to map each Unicode range to its consonant
+                const tamilUnicodeMap = {
+                    // க series (0x0B95-0x0BA6)
+                    0x0B95: 'k', 0x0B96: 'k', 0x0B97: 'k', 0x0B98: 'k', 0x0B99: 'k', 0x0B9A: 'k', 0x0B9B: 'k', 0x0B9C: 'k', 0x0B9D: 'k', 0x0B9E: 'k', 0x0B9F: 'k', 0x0BA0: 'k',
+                    // ங series (0x0B99 is actually ங, but handled above)
+                    // ச series (0x0B9A-0x0BA5) - but 0x0B9A is actually ச
+                    // Need to map by actual Unicode values
+                };
+                
+                // Direct Unicode to consonant mapping
+                const unicodeToConsonant = {};
+                const vowelNames = ['a', 'aa', 'i', 'ii', 'u', 'uu', 'e', 'ee', 'ai', 'o', 'oo', 'au'];
+                
+                // Map each consonant's Unicode range
+                const consonantRanges = [
+                    {start: 0x0B95, end: 0x0BA6, cons: 'க'}, // க
+                    {start: 0x0B99, end: 0x0B9E, cons: 'ங'}, // ங (overlaps, but 0x0B99-0x0B9A are க)
+                    {start: 0x0B9A, end: 0x0BA5, cons: 'ச'}, // ச
+                    {start: 0x0B9E, end: 0x0BA9, cons: 'ஞ'}, // ஞ
+                    {start: 0x0B9F, end: 0x0BAA, cons: 'ட'}, // ட
+                    {start: 0x0BA3, end: 0x0BAE, cons: 'ண'}, // ண
+                    {start: 0x0BA4, end: 0x0BAF, cons: 'த'}, // த
+                    {start: 0x0BA8, end: 0x0BB3, cons: 'ந'}, // ந
+                    {start: 0x0BAA, end: 0x0BB5, cons: 'ப'}, // ப
+                    {start: 0x0BAE, end: 0x0BB9, cons: 'ம'}, // ம
+                    {start: 0x0BAF, end: 0x0BBA, cons: 'ய'}, // ய
+                    {start: 0x0BB0, end: 0x0BBB, cons: 'ர'}, // ர
+                    {start: 0x0BB2, end: 0x0BBD, cons: 'ல'}, // ல
+                    {start: 0x0BB5, end: 0x0BC0, cons: 'வ'}, // வ
+                    {start: 0x0BB4, end: 0x0BBF, cons: 'ழ'}, // ழ
+                    {start: 0x0BB3, end: 0x0BBE, cons: 'ள'}, // ள
+                    {start: 0x0BB1, end: 0x0BBC, cons: 'ற'}, // ற
+                    {start: 0x0BA9, end: 0x0BB4, cons: 'ன'}, // ன
+                    {start: 0x0BB7, end: 0x0BC2, cons: 'ஷ'}, // ஷ
+                    {start: 0x0BB8, end: 0x0BC3, cons: 'ஸ'}, // ஸ
+                    {start: 0x0BB9, end: 0x0BC4, cons: 'ஹ'}  // ஹ
+                ];
+                
+                // Build mapping for all Unicode values
+                consonantRanges.forEach(range => {
+                    for (let code = range.start; code <= range.end && code <= 0x0BCD; code++) {
+                        const vowelIndex = (code - range.start) % 12;
+                        if (consonants[range.cons] && vowelIndex < vowelNames.length) {
+                            unicodeToConsonant[code] = consonants[range.cons] + vowelNames[vowelIndex];
                         }
                     }
+                });
+                
+                if (unicodeToConsonant[charCode]) {
+                    result += unicodeToConsonant[charCode];
+                    i++;
+                    continue;
                 }
                 
                 // Handle base consonant + vowel diacritic
