@@ -3085,60 +3085,64 @@
                     continue;
                 }
                 
-                // Handle precomposed Tamil characters (Unicode 0x0B95-0x0BCD)
-                // Tamil Unicode structure: consonants are NOT sequential
-                // We need to map each Unicode range to its consonant
-                const tamilUnicodeMap = {
-                    // க series (0x0B95-0x0BA6)
-                    0x0B95: 'k', 0x0B96: 'k', 0x0B97: 'k', 0x0B98: 'k', 0x0B99: 'k', 0x0B9A: 'k', 0x0B9B: 'k', 0x0B9C: 'k', 0x0B9D: 'k', 0x0B9E: 'k', 0x0B9F: 'k', 0x0BA0: 'k',
-                    // ங series (0x0B99 is actually ங, but handled above)
-                    // ச series (0x0B9A-0x0BA5) - but 0x0B9A is actually ச
-                    // Need to map by actual Unicode values
-                };
-                
-                // Direct Unicode to consonant mapping
-                const unicodeToConsonant = {};
-                const vowelNames = ['a', 'aa', 'i', 'ii', 'u', 'uu', 'e', 'ee', 'ai', 'o', 'oo', 'au'];
-                
-                // Map each consonant's Unicode range
-                const consonantRanges = [
-                    {start: 0x0B95, end: 0x0BA6, cons: 'க'}, // க
-                    {start: 0x0B99, end: 0x0B9E, cons: 'ங'}, // ங (overlaps, but 0x0B99-0x0B9A are க)
-                    {start: 0x0B9A, end: 0x0BA5, cons: 'ச'}, // ச
-                    {start: 0x0B9E, end: 0x0BA9, cons: 'ஞ'}, // ஞ
-                    {start: 0x0B9F, end: 0x0BAA, cons: 'ட'}, // ட
-                    {start: 0x0BA3, end: 0x0BAE, cons: 'ண'}, // ண
-                    {start: 0x0BA4, end: 0x0BAF, cons: 'த'}, // த
-                    {start: 0x0BA8, end: 0x0BB3, cons: 'ந'}, // ந
-                    {start: 0x0BAA, end: 0x0BB5, cons: 'ப'}, // ப
-                    {start: 0x0BAE, end: 0x0BB9, cons: 'ம'}, // ம
-                    {start: 0x0BAF, end: 0x0BBA, cons: 'ய'}, // ய
-                    {start: 0x0BB0, end: 0x0BBB, cons: 'ர'}, // ர
-                    {start: 0x0BB2, end: 0x0BBD, cons: 'ல'}, // ல
-                    {start: 0x0BB5, end: 0x0BC0, cons: 'வ'}, // வ
-                    {start: 0x0BB4, end: 0x0BBF, cons: 'ழ'}, // ழ
-                    {start: 0x0BB3, end: 0x0BBE, cons: 'ள'}, // ள
-                    {start: 0x0BB1, end: 0x0BBC, cons: 'ற'}, // ற
-                    {start: 0x0BA9, end: 0x0BB4, cons: 'ன'}, // ன
-                    {start: 0x0BB7, end: 0x0BC2, cons: 'ஷ'}, // ஷ
-                    {start: 0x0BB8, end: 0x0BC3, cons: 'ஸ'}, // ஸ
-                    {start: 0x0BB9, end: 0x0BC4, cons: 'ஹ'}  // ஹ
-                ];
-                
-                // Build mapping for all Unicode values
-                consonantRanges.forEach(range => {
-                    for (let code = range.start; code <= range.end && code <= 0x0BCD; code++) {
-                        const vowelIndex = (code - range.start) % 12;
-                        if (consonants[range.cons] && vowelIndex < vowelNames.length) {
-                            unicodeToConsonant[code] = consonants[range.cons] + vowelNames[vowelIndex];
-                        }
+                // Handle precomposed Tamil characters by checking Unicode ranges
+                // Tamil Unicode: Each consonant has 12 consecutive codes for its vowel forms
+                // But consonants themselves are not consecutive - we need to check ranges
+                if (charCode >= 0x0B95 && charCode <= 0x0BCD) {
+                    let consBase = null;
+                    let vowelIndex = 0;
+                    
+                    // Determine which consonant and vowel based on Unicode ranges
+                    if (charCode >= 0x0B95 && charCode <= 0x0BA6) {
+                        consBase = 'க'; vowelIndex = charCode - 0x0B95;
+                    } else if (charCode >= 0x0B99 && charCode <= 0x0B9E) {
+                        consBase = 'ங'; vowelIndex = charCode - 0x0B99;
+                    } else if (charCode >= 0x0B9A && charCode <= 0x0BA5) {
+                        consBase = 'ச'; vowelIndex = charCode - 0x0B9A;
+                    } else if (charCode >= 0x0B9E && charCode <= 0x0BA9) {
+                        consBase = 'ஞ'; vowelIndex = charCode - 0x0B9E;
+                    } else if (charCode >= 0x0B9F && charCode <= 0x0BAA) {
+                        consBase = 'ட'; vowelIndex = charCode - 0x0B9F;
+                    } else if (charCode >= 0x0BA3 && charCode <= 0x0BAE) {
+                        consBase = 'ண'; vowelIndex = charCode - 0x0BA3;
+                    } else if (charCode >= 0x0BA4 && charCode <= 0x0BAF) {
+                        consBase = 'த'; vowelIndex = charCode - 0x0BA4;
+                    } else if (charCode >= 0x0BA8 && charCode <= 0x0BB3) {
+                        consBase = 'ந'; vowelIndex = charCode - 0x0BA8;
+                    } else if (charCode >= 0x0BAA && charCode <= 0x0BB5) {
+                        consBase = 'ப'; vowelIndex = charCode - 0x0BAA;
+                    } else if (charCode >= 0x0BAE && charCode <= 0x0BB9) {
+                        consBase = 'ம'; vowelIndex = charCode - 0x0BAE;
+                    } else if (charCode >= 0x0BAF && charCode <= 0x0BBA) {
+                        consBase = 'ய'; vowelIndex = charCode - 0x0BAF;
+                    } else if (charCode >= 0x0BB0 && charCode <= 0x0BBB) {
+                        consBase = 'ர'; vowelIndex = charCode - 0x0BB0;
+                    } else if (charCode >= 0x0BB2 && charCode <= 0x0BBD) {
+                        consBase = 'ல'; vowelIndex = charCode - 0x0BB2;
+                    } else if (charCode >= 0x0BB5 && charCode <= 0x0BC0) {
+                        consBase = 'வ'; vowelIndex = charCode - 0x0BB5;
+                    } else if (charCode >= 0x0BB4 && charCode <= 0x0BBF) {
+                        consBase = 'ழ'; vowelIndex = charCode - 0x0BB4;
+                    } else if (charCode >= 0x0BB3 && charCode <= 0x0BBE) {
+                        consBase = 'ள'; vowelIndex = charCode - 0x0BB3;
+                    } else if (charCode >= 0x0BB1 && charCode <= 0x0BBC) {
+                        consBase = 'ற'; vowelIndex = charCode - 0x0BB1;
+                    } else if (charCode >= 0x0BA9 && charCode <= 0x0BB4) {
+                        consBase = 'ன'; vowelIndex = charCode - 0x0BA9;
+                    } else if (charCode >= 0x0BB7 && charCode <= 0x0BC2) {
+                        consBase = 'ஷ'; vowelIndex = charCode - 0x0BB7;
+                    } else if (charCode >= 0x0BB8 && charCode <= 0x0BC3) {
+                        consBase = 'ஸ'; vowelIndex = charCode - 0x0BB8;
+                    } else if (charCode >= 0x0BB9 && charCode <= 0x0BC4) {
+                        consBase = 'ஹ'; vowelIndex = charCode - 0x0BB9;
                     }
-                });
-                
-                if (unicodeToConsonant[charCode]) {
-                    result += unicodeToConsonant[charCode];
-                    i++;
-                    continue;
+                    
+                    if (consBase && consonants[consBase] && vowelIndex < 12) {
+                        const vowelNames = ['a', 'aa', 'i', 'ii', 'u', 'uu', 'e', 'ee', 'ai', 'o', 'oo', 'au'];
+                        result += consonants[consBase] + vowelNames[vowelIndex];
+                        i++;
+                        continue;
+                    }
                 }
                 
                 // Handle base consonant + vowel diacritic
