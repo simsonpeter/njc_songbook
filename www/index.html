@@ -3029,162 +3029,140 @@
                 return text;
             }
             
-            // Base consonants (without inherent vowel)
-            const consonants = {
-                'க': 'k', 'ங': 'ng', 'ச': 'ch', 'ஞ': 'nj', 'ட': 't', 'ண': 'n',
-                'த': 'th', 'ந': 'n', 'ப': 'p', 'ம': 'm', 'ய': 'y', 'ர': 'r',
-                'ல': 'l', 'வ': 'v', 'ழ': 'zh', 'ள': 'l', 'ற': 'r', 'ன': 'n',
-                'ஷ': 'sh', 'ஸ': 's', 'ஜ': 'j', 'ஹ': 'h'
-            };
-            
-            // Standalone vowels
-            const vowels = {
+            // Comprehensive Tamil to Romanized mapping (based on tamil_trans tool)
+            const tamilToRomanizedMap = {
+                // Vowels
                 'அ': 'a', 'ஆ': 'aa', 'இ': 'i', 'ஈ': 'ii', 'உ': 'u', 'ஊ': 'uu',
-                'எ': 'e', 'ஏ': 'ee', 'ஐ': 'ai', 'ஒ': 'o', 'ஓ': 'oo', 'ஔ': 'au'
-            };
-            
-            // Vowel diacritics
-            const vowelMarks = {
-                'ா': 'aa', 'ி': 'i', 'ீ': 'ii', 'ு': 'u', 'ூ': 'uu',
-                'ெ': 'e', 'ே': 'ee', 'ை': 'ai', 'ொ': 'o', 'ோ': 'oo', 'ௌ': 'au'
+                'எ': 'e', 'ஏ': 'ee', 'ஐ': 'ai', 'ஒ': 'o', 'ஓ': 'oo', 'ஔ': 'au',
+                
+                // Consonants with pulli (்)
+                'க்': 'k', 'ங்': 'ng', 'ச்': 's', 'ஜ்': 'j', 'ஞ்': 'ny',
+                'ட்': 't', 'ண்': 'n', 'த்': 't', 'ந்': 'n', 'ப்': 'p',
+                'ம்': 'm', 'ய்': 'y', 'ர்': 'r', 'ல்': 'l', 'வ்': 'v',
+                'ழ்': 'l', 'ள்': 'l', 'ற்': 'r', 'ன்': 'n', 'ஸ்': 's',
+                'ஹ்': 'h', 'ஶ்': 'sh', 'ஷ்': 'sh',
+                
+                // Base consonants (with inherent 'a')
+                'க': 'ka', 'ங': 'nga', 'ச': 'sa', 'ஜ': 'ja', 'ஞ': 'nya',
+                'ட': 'ta', 'ண': 'na', 'த': 'ta', 'ந': 'na', 'ப': 'pa',
+                'ம': 'ma', 'ய': 'ya', 'ர': 'ra', 'ல': 'la', 'வ': 'va',
+                'ழ': 'la', 'ள': 'l', 'ற': 'ra', 'ன': 'na', 'ஸ': 'sa',
+                'ஹ': 'ha', 'ஶ': 'sh', 'ஷ': 'sh',
+                
+                // Vowel combinations - க series
+                'கா': 'kaa', 'கி': 'ki', 'கீ': 'kii', 'கு': 'ku', 'கூ': 'kuu',
+                'கெ': 'ke', 'கே': 'kee', 'கை': 'kai', 'கொ': 'ko', 'கோ': 'koo', 'கௌ': 'kau',
+                
+                // ங series
+                'ஙா': 'ngaa', 'ஙி': 'ngi', 'ஙீ': 'ngii', 'ஙு': 'ngu', 'ஙூ': 'nguu',
+                'ஙெ': 'nge', 'ஙே': 'ngee', 'ஙை': 'ngai', 'ஙொ': 'ngo', 'ஙோ': 'ngoo', 'ஙௌ': 'ngau',
+                
+                // ச series
+                'சா': 'saa', 'சி': 'si', 'சீ': 'sii', 'சு': 'su', 'சூ': 'suu',
+                'செ': 'se', 'சே': 'see', 'சை': 'sai', 'சொ': 'so', 'சோ': 'soo', 'சௌ': 'sau',
+                
+                // ஜ series
+                'ஜா': 'jaa', 'ஜி': 'ji', 'ஜீ': 'jii', 'ஜு': 'ju', 'ஜூ': 'juu',
+                'ஜெ': 'je', 'ஜே': 'jee', 'ஜை': 'jai', 'ஜொ': 'jo', 'ஜோ': 'joo', 'ஜௌ': 'jau',
+                
+                // ட series
+                'டா': 'taa', 'டி': 'ti', 'டீ': 'tii', 'டு': 'tu', 'டூ': 'tuu',
+                'டெ': 'te', 'டே': 'tee', 'டை': 'tai', 'டொ': 'to', 'டோ': 'too', 'டௌ': 'tau',
+                
+                // ண series
+                'ணா': 'naa', 'ணி': 'ni', 'ணீ': 'nii', 'ணு': 'nu', 'ணூ': 'nuu',
+                'ணெ': 'ne', 'ணே': 'nee', 'ணை': 'nai', 'ணொ': 'no', 'ணோ': 'noo', 'ணௌ': 'nau',
+                
+                // த series
+                'தா': 'taa', 'தி': 'ti', 'தீ': 'tii', 'து': 'tu', 'தூ': 'tuu',
+                'தெ': 'te', 'தே': 'tee', 'தை': 'tai', 'தொ': 'to', 'தோ': 'too', 'தௌ': 'tau',
+                
+                // ந series
+                'நா': 'naa', 'நி': 'ni', 'நீ': 'nii', 'நு': 'nu', 'நூ': 'nuu',
+                'நெ': 'ne', 'நே': 'nee', 'நை': 'nai', 'நொ': 'no', 'நோ': 'noo', 'நௌ': 'nau',
+                
+                // ப series
+                'பா': 'paa', 'பி': 'pi', 'பீ': 'pii', 'பு': 'pu', 'பூ': 'puu',
+                'பெ': 'pe', 'பே': 'pee', 'பை': 'pai', 'பொ': 'po', 'போ': 'poo', 'பௌ': 'pau',
+                
+                // ம series
+                'மா': 'maa', 'மி': 'mi', 'மீ': 'mii', 'மு': 'mu', 'மூ': 'muu',
+                'மெ': 'me', 'மே': 'mee', 'மை': 'mai', 'மொ': 'mo', 'மோ': 'moo', 'மௌ': 'mau',
+                
+                // ய series
+                'யா': 'yaa', 'யி': 'yi', 'யீ': 'yii', 'யு': 'yu', 'யூ': 'yuu',
+                'யெ': 'ye', 'யே': 'yee', 'யை': 'yai', 'யொ': 'yo', 'யோ': 'yoo', 'யௌ': 'yau',
+                
+                // ர series
+                'ரா': 'raa', 'ரி': 'ri', 'ரீ': 'rii', 'ரு': 'ru', 'ரூ': 'ruu',
+                'ரெ': 're', 'ரே': 'ree', 'ரை': 'rai', 'ரொ': 'ro', 'ரோ': 'roo', 'ரௌ': 'rau',
+                
+                // ல series
+                'லா': 'laa', 'லி': 'li', 'லீ': 'lii', 'லு': 'lu', 'லூ': 'luu',
+                'லெ': 'le', 'லே': 'lee', 'லை': 'lai', 'லொ': 'lo', 'லோ': 'loo', 'லௌ': 'lau',
+                
+                // வ series
+                'வா': 'vaa', 'வி': 'vi', 'வீ': 'vii', 'வு': 'vu', 'வூ': 'vuu',
+                'வெ': 've', 'வே': 'vee', 'வை': 'vai', 'வொ': 'vo', 'வோ': 'voo', 'வௌ': 'vau',
+                
+                // ழ series
+                'ழா': 'laa', 'ழி': 'li', 'ழீ': 'lii', 'ழு': 'lu', 'ழூ': 'luu',
+                'ழெ': 'le', 'ழே': 'lee', 'ழை': 'lai', 'ழொ': 'lo', 'ழோ': 'loo', 'ழௌ': 'lau',
+                
+                // ள series
+                'ளா': 'laa', 'ளி': 'li', 'ளீ': 'lii', 'ளு': 'lu', 'ளூ': 'luu',
+                'ளெ': 'le', 'ளே': 'lee', 'ளை': 'lai', 'ளொ': 'lo', 'ளோ': 'loo', 'ளௌ': 'lau',
+                
+                // ற series
+                'றா': 'raa', 'றி': 'ri', 'றீ': 'rii', 'று': 'ru', 'றூ': 'ruu',
+                'றெ': 're', 'றே': 'ree', 'றை': 'rai', 'றொ': 'ro', 'றோ': 'roo', 'றௌ': 'rau',
+                
+                // ன series
+                'னா': 'naa', 'னி': 'ni', 'னீ': 'nii', 'னு': 'nu', 'னூ': 'nuu',
+                'னெ': 'ne', 'னே': 'nee', 'னை': 'nai', 'னொ': 'no', 'னோ': 'noo', 'னௌ': 'nau',
+                
+                // ஸ series
+                'ஸா': 'saa', 'ஸி': 'si', 'ஸீ': 'sii', 'ஸு': 'su', 'ஸூ': 'suu',
+                'ஸெ': 'se', 'ஸே': 'see', 'ஸை': 'sai', 'ஸொ': 'so', 'ஸோ': 'soo', 'ஸௌ': 'sau',
+                
+                // ஹ series
+                'ஹா': 'haa', 'ஹி': 'hi', 'ஹீ': 'hii', 'ஹு': 'hu', 'ஹூ': 'huu',
+                'ஹெ': 'he', 'ஹே': 'hee', 'ஹை': 'hai', 'ஹொ': 'ho', 'ஹோ': 'hoo', 'ஹௌ': 'hau',
+                
+                // ஶ series
+                'ஶா': 'shaa', 'ஶி': 'shi', 'ஶீ': 'shii', 'ஶு': 'shu', 'ஶூ': 'shuu',
+                'ஶெ': 'she', 'ஶே': 'shee', 'ஶை': 'shai', 'ஶொ': 'sho', 'ஶோ': 'shoo', 'ஶௌ': 'shau',
+                
+                // ஷ series
+                'ஷா': 'shaa', 'ஷி': 'shi', 'ஷீ': 'shii', 'ஷு': 'shu', 'ஷூ': 'shuu',
+                'ஷெ': 'she', 'ஷே': 'shee', 'ஷை': 'shai', 'ஷொ': 'sho', 'ஷோ': 'shoo', 'ஷௌ': 'shau',
+                
+                // Numbers
+                '௦': '0', '௧': '1', '௨': '2', '௩': '3', '௪': '4',
+                '௫': '5', '௬': '6', '௭': '7', '௮': '8', '௯': '9',
+                
+                // Special
+                'ஃ': 'h'
             };
             
             let result = '';
-            let i = 0;
             
-            while (i < text.length) {
+            for (let i = 0; i < text.length; i++) {
                 const char = text[i];
-                const nextChar = text[i + 1];
-                const charAfterNext = text[i + 2];
-                const charCode = char.charCodeAt(0);
+                const nextChar = i + 1 < text.length ? text[i + 1] : '';
+                const twoChars = char + nextChar;
                 
-                // Preserve whitespace and newlines
-                if (/\s/.test(char)) {
+                // Check for 2-character combinations first (like 'கா', 'கி', etc.)
+                if (tamilToRomanizedMap[twoChars]) {
+                    result += tamilToRomanizedMap[twoChars];
+                    i++; // Skip next character
+                } else if (tamilToRomanizedMap[char]) {
+                    result += tamilToRomanizedMap[char];
+                } else {
+                    // Preserve everything else (spaces, line breaks, punctuation, unmapped characters)
                     result += char;
-                    i++;
-                    continue;
                 }
-                
-                // Skip pulli (்) - virama marker, don't output
-                if (char === '்') {
-                    i++;
-                    continue;
-                }
-                
-                // Handle standalone vowels
-                if (vowels[char]) {
-                    result += vowels[char];
-                    i++;
-                    continue;
-                }
-                
-                // Handle special character
-                if (char === 'ஃ') {
-                    result += 'ah';
-                    i++;
-                    continue;
-                }
-                
-                // Handle precomposed Tamil characters by checking Unicode ranges
-                // Tamil Unicode: Each consonant has 12 consecutive codes for its vowel forms
-                // But consonants themselves are not consecutive - we need to check ranges
-                if (charCode >= 0x0B95 && charCode <= 0x0BCD) {
-                    let consBase = null;
-                    let vowelIndex = 0;
-                    
-                    // Determine which consonant and vowel based on Unicode ranges
-                    if (charCode >= 0x0B95 && charCode <= 0x0BA6) {
-                        consBase = 'க'; vowelIndex = charCode - 0x0B95;
-                    } else if (charCode >= 0x0B99 && charCode <= 0x0B9E) {
-                        consBase = 'ங'; vowelIndex = charCode - 0x0B99;
-                    } else if (charCode >= 0x0B9A && charCode <= 0x0BA5) {
-                        consBase = 'ச'; vowelIndex = charCode - 0x0B9A;
-                    } else if (charCode >= 0x0B9E && charCode <= 0x0BA9) {
-                        consBase = 'ஞ'; vowelIndex = charCode - 0x0B9E;
-                    } else if (charCode >= 0x0B9F && charCode <= 0x0BAA) {
-                        consBase = 'ட'; vowelIndex = charCode - 0x0B9F;
-                    } else if (charCode >= 0x0BA3 && charCode <= 0x0BAE) {
-                        consBase = 'ண'; vowelIndex = charCode - 0x0BA3;
-                    } else if (charCode >= 0x0BA4 && charCode <= 0x0BAF) {
-                        consBase = 'த'; vowelIndex = charCode - 0x0BA4;
-                    } else if (charCode >= 0x0BA8 && charCode <= 0x0BB3) {
-                        consBase = 'ந'; vowelIndex = charCode - 0x0BA8;
-                    } else if (charCode >= 0x0BAA && charCode <= 0x0BB5) {
-                        consBase = 'ப'; vowelIndex = charCode - 0x0BAA;
-                    } else if (charCode >= 0x0BAE && charCode <= 0x0BB9) {
-                        consBase = 'ம'; vowelIndex = charCode - 0x0BAE;
-                    } else if (charCode >= 0x0BAF && charCode <= 0x0BBA) {
-                        consBase = 'ய'; vowelIndex = charCode - 0x0BAF;
-                    } else if (charCode >= 0x0BB0 && charCode <= 0x0BBB) {
-                        consBase = 'ர'; vowelIndex = charCode - 0x0BB0;
-                    } else if (charCode >= 0x0BB2 && charCode <= 0x0BBD) {
-                        consBase = 'ல'; vowelIndex = charCode - 0x0BB2;
-                    } else if (charCode >= 0x0BB5 && charCode <= 0x0BC0) {
-                        consBase = 'வ'; vowelIndex = charCode - 0x0BB5;
-                    } else if (charCode >= 0x0BB4 && charCode <= 0x0BBF) {
-                        consBase = 'ழ'; vowelIndex = charCode - 0x0BB4;
-                    } else if (charCode >= 0x0BB3 && charCode <= 0x0BBE) {
-                        consBase = 'ள'; vowelIndex = charCode - 0x0BB3;
-                    } else if (charCode >= 0x0BB1 && charCode <= 0x0BBC) {
-                        consBase = 'ற'; vowelIndex = charCode - 0x0BB1;
-                    } else if (charCode >= 0x0BA9 && charCode <= 0x0BB4) {
-                        consBase = 'ன'; vowelIndex = charCode - 0x0BA9;
-                    } else if (charCode >= 0x0BB7 && charCode <= 0x0BC2) {
-                        consBase = 'ஷ'; vowelIndex = charCode - 0x0BB7;
-                    } else if (charCode >= 0x0BB8 && charCode <= 0x0BC3) {
-                        consBase = 'ஸ'; vowelIndex = charCode - 0x0BB8;
-                    } else if (charCode >= 0x0BB9 && charCode <= 0x0BC4) {
-                        consBase = 'ஹ'; vowelIndex = charCode - 0x0BB9;
-                    }
-                    
-                    if (consBase && consonants[consBase] && vowelIndex < 12) {
-                        const vowelNames = ['a', 'aa', 'i', 'ii', 'u', 'uu', 'e', 'ee', 'ai', 'o', 'oo', 'au'];
-                        result += consonants[consBase] + vowelNames[vowelIndex];
-                        i++;
-                        continue;
-                    }
-                }
-                
-                // Handle base consonant + vowel diacritic
-                if (consonants[char] && nextChar && vowelMarks[nextChar]) {
-                    result += consonants[char] + vowelMarks[nextChar];
-                    i += 2;
-                    continue;
-                }
-                
-                // Handle consonant clusters (consonant + pulli + consonant)
-                if (consonants[char] && nextChar === '்' && charAfterNext) {
-                    if (consonants[charAfterNext]) {
-                        // Regular cluster
-                        if (char === 'க' && charAfterNext === 'ஷ') {
-                            result += 'ksh';
-                        } else {
-                            result += consonants[char] + consonants[charAfterNext];
-                        }
-                        i += 3;
-                        continue;
-                    } else {
-                        // Just pulli, no following consonant
-                        result += consonants[char];
-                        i += 2;
-                        continue;
-                    }
-                }
-                
-                // Handle base consonant with default 'a'
-                if (consonants[char]) {
-                    result += consonants[char] + 'a';
-                    i++;
-                    continue;
-                }
-                
-                // Unmapped Tamil or non-Tamil - keep as is
-                result += char;
-                i++;
             }
-            
-            // Post-processing: normalize spaces but preserve line breaks
-            result = result.replace(/[ \t]+/g, ' ').replace(/\n[ \t]+/g, '\n').trim();
             
             return result;
         }
